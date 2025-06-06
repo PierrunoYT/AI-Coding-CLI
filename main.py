@@ -239,6 +239,71 @@ class ChatClient:
                 # Execute tools sequentially
                 self._execute_tools_sequential(tool_calls)
                 
+            # Get final response after tool execution
+            final_payload = {
+                "model": self.config.get_model(),
+                "messages": self.conversation_history,
+                "stream": False,
+            }
+            
+            # Only add tools if the model supports them
+            model_id = self.config.get_model().lower()
+            supports_functions = any(x in model_id for x in ['gpt-4', 'gpt-3.5', 'claude', 'gemini'])
+            if supports_functions:
+                final_payload["tools"] = TOOLS_DEFINITIONS
+                final_payload["tool_choice"] = "auto"
+            
+            try:
+                final_response = requests.post(
+                    f"{self.api_base}/chat/completions",
+                    headers=self.headers,
+                    json=final_payload
+                )
+                final_response.raise_for_status()
+                final_data = final_response.json()
+            except requests.exceptions.HTTPError as e:
+                if final_response.status_code == 400:
+                    # Try again without tool_choice if it's a 400 error
+                    console.print("[yellow]⚠️  Tool choice parameter causing issues in final call, retrying without it...[/yellow]")
+                    final_payload_retry = final_payload.copy()
+                    if "tool_choice" in final_payload_retry:
+                        del final_payload_retry["tool_choice"]
+                    
+                    final_response = requests.post(
+                        f"{self.api_base}/chat/completions",
+                        headers=self.headers,
+                        json=final_payload_retry
+                    )
+                    final_response.raise_for_status()
+                    final_data = final_response.json()
+                else:
+                    console.print(f"[bold red]API Error in final call: {e}[/bold red]")
+                    return
+            except requests.exceptions.RequestException as e:
+                console.print(f"[bold red]API Error in final call: {e}[/bold red]")
+                return
+            
+            if "usage" in final_data:
+                self.total_tokens += final_data['usage']['total_tokens']
+            
+            final_message = final_data['choices'][0]['message']
+            final_content = final_message.get('content', '')
+            
+            # Check if AI wants to use more tools in the final response
+            if final_message.get('tool_calls'):
+                # Handle additional tool calls if needed (recursive case)
+                console.print("[yellow]⚠️  AI wants to use more tools in response. This might indicate a complex workflow.[/yellow]")
+                self.conversation_history.append(final_message)
+                return self.send_chat_request("")  # Continue with empty message to process additional tools
+            else:
+                # Display the final AI response
+                self.conversation_history.append(final_message)
+                if final_content:
+                    markdown_content = Markdown(final_content)
+                    console.print(markdown_content)
+                else:
+                    console.print("[italic]AI provided tool results but no additional commentary.[/italic]")
+                
         else:
             # AI didn't call tools - check if it promised to use any
             if self.config.agent_mode and ai_content:
