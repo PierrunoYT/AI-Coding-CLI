@@ -61,6 +61,8 @@ python main.py
 - `/model` - Show current model information
 - `/models` - List and select from all available OpenRouter models
 - `/agent` - Toggle coding agent mode (enables file system tools)
+- `/parallel` - Toggle tool execution mode (parallel/sequential)
+- `/max-tools <number>` - Set maximum tool calls per response (1-20)
 - `/stats` - Show conversation statistics
 - `/reset` - Reset conversation history
 - `/clear` - Clear the screen
@@ -86,6 +88,16 @@ Enable powerful coding assistance by typing `/agent` to toggle agent mode. When 
 ### Code Execution
 - **Run Python Scripts**: Execute Python files with safety confirmations and timeout protection
 
+### Tool Execution Modes
+- **Sequential Mode** 🔄: Tools run one after another
+  - Safer for dependent operations
+  - Shows step-by-step progress
+  - Better for file operations that depend on each other
+- **Parallel Mode** ⚡: Multiple tools run simultaneously  
+  - Faster execution for independent operations
+  - Progress bar shows completion status
+  - Perfect for bulk file operations
+
 ### Example Agent Tasks
 Try these commands in agent mode:
 
@@ -101,6 +113,15 @@ Try these commands in agent mode:
 - "Append a comment to the end of hello.py"
 - "Replace 'Hello World' with 'Hello Coding Agent' in hello.py"
 - "Insert a new import statement at line 2 in main.py"
+
+**Bulk Operations (perfect for parallel mode):**
+- "Create three Python files: app.py, utils.py, and config.py"
+- "Read the contents of all .py files in this directory"
+- "Backup all important files by creating .bak copies"
+
+**Configuration Commands:**
+- `/parallel` - Switch between sequential and parallel tool execution
+- `/max-tools 15` - Allow up to 15 tool calls per AI response
 
 ## Model Selection
 

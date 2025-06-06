@@ -1,9 +1,13 @@
 import os
 import requests
 import json
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from rich.console import Console
 from rich.table import Table
 from rich.markdown import Markdown
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 from tools import TOOLS_DEFINITIONS, AVAILABLE_TOOLS
 
 # --- Configuration ---
@@ -15,6 +19,8 @@ class Config:
         self.default_model = "openai/gpt-4o"
         self.model = self.default_model
         self.agent_mode = False  # Toggle for coding agent mode
+        self.tool_execution_mode = "sequential"  # "sequential" or "parallel"
+        self.max_tool_calls = 10  # Maximum tool calls per response
 
     def get_model(self):
         return self.model
@@ -25,6 +31,19 @@ class Config:
     def toggle_agent_mode(self):
         self.agent_mode = not self.agent_mode
         return self.agent_mode
+    
+    def toggle_tool_execution_mode(self):
+        if self.tool_execution_mode == "sequential":
+            self.tool_execution_mode = "parallel"
+        else:
+            self.tool_execution_mode = "sequential"
+        return self.tool_execution_mode
+    
+    def set_max_tool_calls(self, max_calls):
+        if max_calls > 0 and max_calls <= 20:
+            self.max_tool_calls = max_calls
+            return True
+        return False
 
 # --- API Client ---
 class ChatClient:
@@ -92,27 +111,24 @@ class ChatClient:
             
             # Check if AI wants to use tools
             if ai_message.get('tool_calls'):
-                console.print("[bold cyan]🤖 Assistant is using tools...[/bold cyan]")
+                tool_calls = ai_message['tool_calls']
+                num_tools = len(tool_calls)
                 
-                for tool_call in ai_message['tool_calls']:
-                    function_name = tool_call['function']['name']
-                    function_to_call = AVAILABLE_TOOLS.get(function_name)
-                    
-                    if function_to_call:
-                        function_args = json.loads(tool_call['function']['arguments'])
-                        console.print(f"   🔧 Calling `{function_name}` with args: {function_args}")
-                        
-                        # Call the actual Python function
-                        function_response = function_to_call(**function_args)
-                        console.print(f"   📋 Tool response: {function_response}")
-                        
-                        # Add tool response to conversation
-                        self.conversation_history.append({
-                            "tool_call_id": tool_call['id'],
-                            "role": "tool",
-                            "name": function_name,
-                            "content": function_response,
-                        })
+                # Limit the number of tool calls for safety
+                if num_tools > self.config.max_tool_calls:
+                    console.print(f"[bold red]⚠️  Too many tool calls requested ({num_tools}). Limiting to {self.config.max_tool_calls}.[/bold red]")
+                    tool_calls = tool_calls[:self.config.max_tool_calls]
+                    num_tools = len(tool_calls)
+                
+                execution_mode = self.config.tool_execution_mode
+                console.print(f"[bold cyan]🤖 Assistant is using {num_tools} tool(s) in {execution_mode} mode...[/bold cyan]")
+                
+                if execution_mode == "parallel" and num_tools > 1:
+                    # Execute tools in parallel
+                    self._execute_tools_parallel(tool_calls)
+                else:
+                    # Execute tools sequentially
+                    self._execute_tools_sequential(tool_calls)
                 
                 # Get final response after tool execution
                 final_payload = {
@@ -144,6 +160,124 @@ class ChatClient:
             console.print(f"[bold red]API Error: {e}[/bold red]")
             self.conversation_history.pop() # remove user message if request failed
 
+    def _execute_single_tool(self, tool_call):
+        """Execute a single tool call and return the result."""
+        function_name = tool_call['function']['name']
+        function_to_call = AVAILABLE_TOOLS.get(function_name)
+        
+        if not function_to_call:
+            return {
+                "tool_call_id": tool_call['id'],
+                "role": "tool",
+                "name": function_name,
+                "content": f"❌ Error: Tool '{function_name}' not found.",
+            }
+        
+        try:
+            function_args = json.loads(tool_call['function']['arguments'])
+            start_time = time.time()
+            function_response = function_to_call(**function_args)
+            execution_time = time.time() - start_time
+            
+            return {
+                "tool_call_id": tool_call['id'],
+                "role": "tool", 
+                "name": function_name,
+                "content": function_response,
+                "execution_time": execution_time,
+                "args": function_args
+            }
+        except json.JSONDecodeError as e:
+            return {
+                "tool_call_id": tool_call['id'],
+                "role": "tool",
+                "name": function_name,
+                "content": f"❌ Error parsing arguments: {e}",
+            }
+        except Exception as e:
+            return {
+                "tool_call_id": tool_call['id'],
+                "role": "tool",
+                "name": function_name,
+                "content": f"❌ Error executing tool: {e}",
+            }
+
+    def _execute_tools_sequential(self, tool_calls):
+        """Execute tools one after another in sequence."""
+        for i, tool_call in enumerate(tool_calls, 1):
+            function_name = tool_call['function']['name']
+            console.print(f"   🔧 [{i}/{len(tool_calls)}] Calling `{function_name}`...")
+            
+            result = self._execute_single_tool(tool_call)
+            
+            # Display result
+            if "execution_time" in result:
+                console.print(f"   📋 Tool response ({result['execution_time']:.2f}s): {result['content']}")
+            else:
+                console.print(f"   📋 Tool response: {result['content']}")
+            
+            # Add to conversation history
+            self.conversation_history.append({
+                "tool_call_id": result["tool_call_id"],
+                "role": result["role"],
+                "name": result["name"],
+                "content": result["content"],
+            })
+
+    def _execute_tools_parallel(self, tool_calls):
+        """Execute tools in parallel using threading."""
+        console.print("   ⚡ Executing tools in parallel...")
+        
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            console=console,
+            transient=True
+        ) as progress:
+            
+            task = progress.add_task("Running tools...", total=len(tool_calls))
+            
+            with ThreadPoolExecutor(max_workers=min(len(tool_calls), 5)) as executor:
+                # Submit all tool calls
+                future_to_tool = {
+                    executor.submit(self._execute_single_tool, tool_call): tool_call 
+                    for tool_call in tool_calls
+                }
+                
+                completed_results = []
+                
+                # Collect results as they complete
+                for future in as_completed(future_to_tool):
+                    tool_call = future_to_tool[future]
+                    result = future.result()
+                    completed_results.append(result)
+                    
+                    function_name = tool_call['function']['name']
+                    if "execution_time" in result:
+                        console.print(f"   ✅ `{function_name}` completed ({result['execution_time']:.2f}s)")
+                    else:
+                        console.print(f"   ✅ `{function_name}` completed")
+                    
+                    progress.advance(task)
+        
+        # Sort results by original order and add to conversation
+        tool_call_ids = [tc['id'] for tc in tool_calls]
+        sorted_results = sorted(completed_results, key=lambda r: tool_call_ids.index(r['tool_call_id']))
+        
+        console.print("\n   📋 Tool Results:")
+        for i, result in enumerate(sorted_results, 1):
+            console.print(f"   {i}. {result['name']}: {result['content']}")
+            
+            # Add to conversation history
+            self.conversation_history.append({
+                "tool_call_id": result["tool_call_id"],
+                "role": result["role"],
+                "name": result["name"],
+                "content": result["content"],
+            })
+
     def reset_conversation(self):
         self.conversation_history = []
         self.total_tokens = 0
@@ -155,6 +289,11 @@ class ChatClient:
         table.add_column("Metric", style="cyan")
         table.add_column("Value", style="magenta")
         table.add_row("Model", self.config.get_model())
+        table.add_row("Agent Mode", "🤖 ON" if self.config.agent_mode else "💬 OFF")
+        if self.config.agent_mode:
+            execution_emoji = "⚡" if self.config.tool_execution_mode == "parallel" else "🔄"
+            table.add_row("Tool Execution", f"{execution_emoji} {self.config.tool_execution_mode.upper()}")
+            table.add_row("Max Tool Calls", str(self.config.max_tool_calls))
         table.add_row("Total Tokens", str(self.total_tokens))
         # table.add_row("Estimated Cost", f"${self.total_cost:.6f}") # Add cost calculation later
         table.add_row("History Length", f"{len(self.conversation_history)} messages")
@@ -171,6 +310,8 @@ def print_help():
 - `/model`: Show the current AI model.
 - `/models`: List and select from available models.
 - `/agent`: Toggle coding agent mode (enables file system tools).
+- `/parallel`: Toggle tool execution mode (parallel/sequential).
+- `/max-tools <number>`: Set maximum tool calls per response (1-20).
 - `/stats`: Show conversation statistics.
 - `/reset`: Reset the conversation history.
 - `/clear`: Clear the console screen.
@@ -181,6 +322,10 @@ When agent mode is enabled, the AI has access to these tools:
 - **File Operations**: List, read, write, and delete files
 - **Directory Operations**: Create directories and navigate file system
 - **Code Execution**: Run Python scripts (with user confirmation)
+
+## Tool Execution Modes
+- **Sequential**: Tools run one after another (safer, shows progress)
+- **Parallel**: Tools run simultaneously (faster for independent operations)
 
 Agent mode is perfect for coding tasks, file management, and automation!
     """)
@@ -257,6 +402,9 @@ def main():
     console.print(f"Type a message to start chatting or `/help` for commands.")
     console.print(f"Using model: [cyan]{client.config.get_model()}[/cyan]")
     console.print(f"Agent mode: [yellow]{'🤖 ON' if client.config.agent_mode else '💬 OFF'}[/yellow] (type `/agent` to toggle)")
+    if client.config.agent_mode:
+        execution_emoji = "⚡" if client.config.tool_execution_mode == "parallel" else "🔄"
+        console.print(f"Tool execution: [cyan]{execution_emoji} {client.config.tool_execution_mode.upper()}[/cyan] | Max tools: [cyan]{client.config.max_tool_calls}[/cyan]")
 
     try:
         while True:
@@ -282,8 +430,38 @@ def main():
                     console.print(f"[bold yellow]Agent mode: {status_text}[/bold yellow]")
                     if agent_status:
                         console.print("[green]✅ Coding agent tools are now available![/green]")
+                        execution_emoji = "⚡" if client.config.tool_execution_mode == "parallel" else "🔄"
+                        console.print(f"Tool execution: [cyan]{execution_emoji} {client.config.tool_execution_mode.upper()}[/cyan] | Max tools: [cyan]{client.config.max_tool_calls}[/cyan]")
                     else:
                         console.print("[yellow]💬 Back to regular chat mode.[/yellow]")
+                elif command == "/parallel":
+                    if not client.config.agent_mode:
+                        console.print("[yellow]⚠️  Agent mode must be enabled to change tool execution mode.[/yellow]")
+                    else:
+                        execution_mode = client.config.toggle_tool_execution_mode()
+                        execution_emoji = "⚡" if execution_mode == "parallel" else "🔄"
+                        console.print(f"[bold cyan]Tool execution mode: {execution_emoji} {execution_mode.upper()}[/bold cyan]")
+                        if execution_mode == "parallel":
+                            console.print("[green]⚡ Tools will now run in parallel for faster execution![/green]")
+                        else:
+                            console.print("[yellow]🔄 Tools will now run sequentially for safer execution.[/yellow]")
+                elif command.startswith("/max-tools"):
+                    if not client.config.agent_mode:
+                        console.print("[yellow]⚠️  Agent mode must be enabled to change max tool calls.[/yellow]")
+                    else:
+                        try:
+                            parts = command.split()
+                            if len(parts) == 2:
+                                max_tools = int(parts[1])
+                                if client.config.set_max_tool_calls(max_tools):
+                                    console.print(f"[bold green]✅ Maximum tool calls set to: {max_tools}[/bold green]")
+                                else:
+                                    console.print("[bold red]❌ Invalid number. Please use a number between 1 and 20.[/bold red]")
+                            else:
+                                console.print(f"[yellow]Current max tool calls: {client.config.max_tool_calls}[/yellow]")
+                                console.print("[yellow]Usage: /max-tools <number>[/yellow]")
+                        except ValueError:
+                            console.print("[bold red]❌ Please provide a valid number.[/bold red]")
                 elif command == "/stats":
                     client.show_stats()
                 else:
