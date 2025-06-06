@@ -5,12 +5,15 @@
 ```
 AI Coding CLI/
 ├── 📄 LICENSE                    # MIT License for open source distribution
-├── 🎯 main.py                    # Core application and CLI interface (576 lines)
+├── 🎯 main.py                    # Main application entry point and CLI command handling
+├── ⚙️ config.py                   # Configuration management for the application
+├── 🌐 chat_client.py             # OpenRouter API client and conversation handling
+├── 🎨 ui.py                      # User interface functions and display logic
+├── 🛠️ tools.py                  # File system tools and function definitions (369 lines)
+├── 🧪 test_api.py               # API connection testing utility
 ├── 📚 README.md                  # Comprehensive user documentation and setup guide
 ├── 📦 requirements.txt           # Python dependencies (requests, rich)
 ├── 📋 tasks.md                   # Complete development history and documentation
-├── 🧪 test_api.py               # API connection testing utility
-├── 🛠️ tools.py                  # File system tools and function definitions (369 lines)
 ├── 🤖 CLAUDE.md                 # Development guidance for Claude Code instances
 ├── 🔍 code-issues.md            # Code quality analysis and issue tracking
 └── 📝 project-structure.md      # This file - Project architecture overview
@@ -20,11 +23,13 @@ AI Coding CLI/
 
 ### **Core Application Layer**
 ```
-📱 User Interface
+📱 User Interface (ui.py)
     ↓
 🎯 main.py (CLI Controller)
     ↓
-🔌 ChatClient (API Integration)
+⚙️ config.py (Configuration)
+    ↓
+🌐 chat_client.py (API Integration)
     ↓
 🌐 OpenRouter API
 ```
@@ -40,32 +45,67 @@ AI Coding CLI/
 
 ## 📄 **File Breakdown & Responsibilities**
 
-### **🎯 main.py** - *Core Application* (576 lines)
-The heart of the application containing:
+### **🎯 main.py** - *Main Application Entry Point*
+The CLI controller and command handler:
 
-#### **Configuration Management**
-- `Config` class - Environment variables, model settings, agent mode
+#### **Application Initialization**
+- Application startup and configuration validation
+- API key checking and environment setup
+- Welcome message and status display
+
+#### **Command Processing**
+- Interactive CLI command loop
+- Command parsing and routing
+- User input handling and validation
+
+#### **Module Coordination**
+- Integration between config, chat_client, and ui modules
+- Error handling and application flow control
+
+### **⚙️ config.py** - *Configuration Management*
+Centralized configuration handling:
+
+#### **Environment Variables**
 - API key validation and format checking
-- Debug mode and tool execution configuration
+- Debug mode and application settings
+- Optional URL and name configuration
 
-#### **API Client Implementation**
-- `ChatClient` class - Complete OpenRouter integration
-- HTTP error handling with retry logic
-- Model compatibility detection
-- Connection testing and validation
+#### **Model Settings**
+- Default model selection and switching
+- Model compatibility tracking
+- Agent mode and tool execution configuration
 
-#### **User Interface**
-- Rich console interface with styled output
-- Interactive command processing
-- Progress indicators and visual feedback
-- Markdown help system rendering
+### **🌐 chat_client.py** - *API Client and Conversation Management*
+Complete OpenRouter integration:
+
+#### **API Communication**
+- HTTP client with proper headers and authentication
+- Request/response handling with error recovery
+- Model listing and selection functionality
+
+#### **Conversation Management**
+- Full conversation history maintenance
+- System message injection for agent mode
+- Token usage tracking and statistics
 
 #### **Tool Orchestration**
 - Sequential and parallel tool execution
 - Tool call limiting and safety measures
 - Smart tool promise detection with behavioral analysis
-- Result processing and display
-- Conversation history management
+- Result processing and conversation integration
+
+### **🎨 ui.py** - *User Interface and Display Logic*
+Rich terminal interface components:
+
+#### **Display Functions**
+- Help system with markdown formatting
+- Model selection interface with tables
+- Welcome messages and status displays
+
+#### **Interactive Elements**
+- User prompts and confirmations
+- Progress indicators and visual feedback
+- Command handlers for different modes
 
 #### **CLI Commands**
 ```

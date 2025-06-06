@@ -247,7 +247,10 @@ DEBUG="true"                            # Optional: Enable debug logging
 
 ## Files in This Project
 
-- `main.py` - Main application with chat interface and agent mode
+- `main.py` - Main application entry point and CLI command handling
+- `config.py` - Configuration management for the application
+- `chat_client.py` - OpenRouter API client and conversation handling
+- `ui.py` - User interface functions and display logic
 - `tools.py` - File system tools and function definitions
 - `test_api.py` - API connection testing utility
 - `requirements.txt` - Python dependencies

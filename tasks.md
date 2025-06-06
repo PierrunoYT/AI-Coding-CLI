@@ -273,14 +273,27 @@ A comprehensive command-line chat application that integrates with OpenRouter's 
 
 ## 📁 **File Structure & Responsibilities**
 
-### **Core Application Files**
-- **`main.py`** (576 lines):
-  - Configuration management system
-  - ChatClient with full OpenRouter integration
-  - Command processing and CLI interface
+### **Core Application Files (Refactored Architecture)**
+- **`main.py`**:
+  - Application entry point and CLI command handling
+  - Module coordination and error handling
+  - Interactive command loop
+
+- **`config.py`**:
+  - Centralized configuration management
+  - Environment variable handling
+  - Model and agent mode settings
+
+- **`chat_client.py`**:
+  - OpenRouter API integration
+  - Conversation history management
   - Tool execution orchestration
   - Error handling and recovery
-  - UI rendering and user interaction
+
+- **`ui.py`**:
+  - User interface components and display logic
+  - Interactive prompts and feedback
+  - Help system and model selection
 
 - **`tools.py`** (369 lines):
   - 10 comprehensive file system tools
