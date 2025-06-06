@@ -62,7 +62,7 @@ This document analyzes potential code issues, bugs, and areas for improvement in
 ### ✅ **FIXED: main.py:18** - Hardcoded Default URL
 ~~**Issue**: Contains placeholder URL that should be updated to the actual repository URL.~~
 
-**Status**: **RESOLVED** - Updated placeholder URL to actual repository URL `https://github.com/pierr/AI-Coding-CLI` for proper attribution in API requests.
+**Status**: **RESOLVED** - Updated placeholder URL to actual repository URL `https://github.com/PierrunoYT/ai-coding-cli` for proper attribution in API requests.
 
 ### **main.py:136** - No Type Hints
 **Issue**: The codebase lacks type hints throughout, making it harder to catch type-related bugs.

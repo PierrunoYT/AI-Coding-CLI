@@ -15,7 +15,7 @@ import re
 class Config:
     def __init__(self):
         self.api_key = os.getenv("OPENROUTER_API_KEY")
-        self.app_url = os.getenv("APP_URL", "https://github.com/pierr/AI-Coding-CLI")
+        self.app_url = os.getenv("APP_URL", "https://github.com/PierrunoYT/ai-coding-cli")
         self.app_name = os.getenv("APP_NAME", "AI Chat CLI (Python)")
         self.default_model = "openai/gpt-4o"
         self.model = self.default_model
