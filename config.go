@@ -28,9 +28,15 @@ func LoadConfig() (*Config, error) {
 		appName = "AI Chat CLI" // Default value
 	}
 
+	// Default to Claude 4 Opus, the most capable model
+	model := os.Getenv("AI_MODEL")
+	if model == "" {
+		model = "anthropic/claude-opus-4" // Latest Claude 4 model
+	}
+
 	return &Config{
 		OpenRouterAPIKey: apiKey,
-		Model:            "anthropic/claude-3-opus-20240229", // Default model
+		Model:            model,
 		AppURL:           appURL,
 		AppName:          appName,
 	}, nil
