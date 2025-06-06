@@ -70,7 +70,6 @@ func (c *ChatClient) StreamMessage(messages []Message, callback func(string)) er
 	req.Header.Set("Authorization", "Bearer "+c.config.OpenRouterAPIKey)
 	req.Header.Set("HTTP-Referer", c.config.AppURL)    // Required for rankings
 	req.Header.Set("X-Title", c.config.AppName)        // Required for rankings
-	req.Header.Set("OpenAI-Organization", "org-123")   // Optional: for OpenAI models
 
 	resp, err := c.client.Do(req)
 	if err != nil {
