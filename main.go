@@ -151,33 +151,38 @@ func printModelList(models []ModelInfo) {
 func selectModel(chatClient *ChatClient) error {
 	models, err := chatClient.GetAvailableModels()
 	if err != nil {
-		return fmt.Errorf("error fetching models: %v", err)
+		return fmt.Errorf("failed to get models: %v", err)
 	}
 
+	fmt.Println("\nAvailable Models:")
 	printModelList(models)
 
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter model number to select (or press Enter to keep current): ")
-	input, err := reader.ReadString('\n')
-	if err != nil {
-		return fmt.Errorf("error reading input: %v", err)
-	}
+	fmt.Println("\nEnter model number or type model handle (e.g., 'openai/gpt-4-0314'):")
+	var input string
+	fmt.Scanln(&input)
 
-	input = strings.TrimSpace(input)
-	if input == "" {
+	// Try to parse as number first
+	if num, err := strconv.Atoi(input); err == nil {
+		if num < 1 || num > len(models) {
+			return fmt.Errorf("invalid model number")
+		}
+		selectedModel := models[num-1]
+		config.SetModel(selectedModel.ID)
+		fmt.Printf("\nSelected model: %s\n", selectedModel.ID)
 		return nil
 	}
 
-	index, err := strconv.Atoi(input)
-	if err != nil || index < 1 || index > len(models) {
-		return fmt.Errorf("invalid model number")
+	// If not a number, treat as model handle
+	// Validate that the model exists in the list
+	for _, model := range models {
+		if model.ID == input {
+			config.SetModel(input)
+			fmt.Printf("\nSelected model: %s\n", input)
+			return nil
+		}
 	}
 
-	selectedModel := models[index-1]
-	config.Model = selectedModel.ID
-	green := color.New(color.FgGreen).SprintFunc()
-	fmt.Printf("\n%s Selected model: %s\n", green("✓"), selectedModel.ID)
-	return nil
+	return fmt.Errorf("invalid model handle: %s", input)
 }
 
 func main() {

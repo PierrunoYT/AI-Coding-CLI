@@ -75,8 +75,12 @@ The application supports dynamic model selection from all available OpenRouter m
    - Context length
    - Pricing information
    - Description (if available)
-3. Enter the number of the model you want to use
+3. You can select a model in two ways:
+   - Enter the number of the model from the list
+   - Type the model handle directly (e.g., 'openai/gpt-4-0314')
 4. The selected model will be used for all subsequent conversations
+
+Note: When typing a model handle directly, it must match exactly with one of the available models from OpenRouter.
 
 ## Configuration
 
