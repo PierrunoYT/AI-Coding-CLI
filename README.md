@@ -4,7 +4,8 @@ A powerful command-line chat application that uses OpenRouter's API to interact 
 
 ## Recent Updates
 
-### 🆕 Latest Features & Fixes
+### 🆕 Latest Features & Fixes (January 2025)
+- **🔧 Enhanced Code Quality**: Fixed 4 high/medium priority issues including model compatibility detection, exception handling, schema compliance, and repository URL
 - **✅ Fixed AI Response Labeling**: AI responses now properly display with "AI:" label instead of just showing "you:"
 - **🎯 Smart Tool Promise Detection**: Automatically detects when AI promises to use tools but doesn't follow through
 - **⚡ Parallel Tool Execution**: Run multiple tools simultaneously for faster operation

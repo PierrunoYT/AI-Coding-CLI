@@ -9,6 +9,10 @@ console = Console()
 def list_files(directory="."):
     """Lists all files and directories in the specified directory."""
     try:
+        # Handle default directory parameter
+        if not directory:
+            directory = "."
+            
         items = []
         for item in os.listdir(directory):
             item_path = os.path.join(directory, item)
@@ -211,8 +215,7 @@ TOOLS_DEFINITIONS = [
                 "properties": {
                     "directory": {
                         "type": "string", 
-                        "description": "The directory to inspect. Defaults to current directory if not specified.",
-                        "default": "."
+                        "description": "The directory to inspect. Defaults to current directory if not specified."
                     }
                 },
                 "required": [],

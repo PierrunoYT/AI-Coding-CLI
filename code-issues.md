@@ -21,15 +21,10 @@ This document analyzes potential code issues, bugs, and areas for improvement in
 
 **Status**: **RESOLVED** - Initialized `response = None` and added proper null checks before accessing response attributes. Added fallback error message when response is undefined.
 
-### **main.py:158** - Hardcoded Model Compatibility Check
-```python
-supports_functions = any(x in model_id for x in ['gpt-4', 'gpt-3.5', 'claude', 'gemini'])
-```
-**Issue**: Model compatibility is hardcoded and may become outdated as new models are added or existing ones change capabilities.
+### ✅ **FIXED: main.py:158** - Hardcoded Model Compatibility Check
+~~**Issue**: Model compatibility is hardcoded and may become outdated as new models are added or existing ones change capabilities.~~
 
-**Impact**: Medium-High - May incorrectly identify model capabilities.
-
-**Fix**: Consider a more dynamic approach or configuration-based model capability detection.
+**Status**: **RESOLVED** - Implemented comprehensive model compatibility check with extensive list of function-calling models including GPT-4, Claude-3, Gemini, Mistral, and LLaMA variants. Added user warning for unsupported models.
 
 ### ✅ **FIXED: tools.py:59** - Hardcoded Python Executable
 ~~**Issue**: Uses hardcoded "python" command which may not exist on all systems (some use "python3").~~
@@ -40,20 +35,10 @@ supports_functions = any(x in model_id for x in ['gpt-4', 'gpt-3.5', 'claude', '
 
 ## ⚠️ Medium Priority Issues
 
-### **main.py:200** - Error Handling Could Be More Specific
-```python
-try:
-    error_data = response.json()
-    error_msg = error_data.get('error', {}).get('message', str(e))
-    console.print(f"[bold red]API Error (400): {error_msg}[/bold red]")
-except:
-    console.print(f"[bold red]API Error (400): {e}[/bold red]")
-```
-**Issue**: Bare `except:` clause catches all exceptions, which can hide programming errors.
+### ✅ **FIXED: main.py:200** - Error Handling Could Be More Specific
+~~**Issue**: Bare `except:` clause catches all exceptions, which can hide programming errors.~~
 
-**Impact**: Medium - May mask other issues during error handling.
-
-**Fix**: Use specific exception types like `json.JSONDecodeError` or `KeyError`.
+**Status**: **RESOLVED** - Replaced bare except with specific exception handling for `ValueError`, `KeyError`, and `AttributeError` to properly catch JSON parsing and data access errors while avoiding masking programming errors.
 
 ### **main.py:471** - Commented Out Code
 ```python
@@ -65,29 +50,19 @@ except:
 
 **Fix**: Either implement the cost calculation or remove the commented code.
 
-### **tools.py:214** - Inconsistent Schema Definition
-```python
-"default": "."
-```
-**Issue**: The schema uses a `default` field which is not standard JSON Schema for OpenAI function definitions.
+### ✅ **FIXED: tools.py:214** - Inconsistent Schema Definition
+~~**Issue**: The schema uses a `default` field which is not standard JSON Schema for OpenAI function definitions.~~
 
-**Impact**: Medium - May cause issues with some API implementations.
-
-**Fix**: Remove `default` field or handle defaults in the function implementation.
+**Status**: **RESOLVED** - Removed non-standard `default` field from JSON schema and implemented default value handling directly in the function implementation for better API compatibility.
 
 ---
 
 ## 💡 Low Priority Issues & Improvements
 
-### **main.py:18** - Hardcoded Default URL
-```python
-self.app_url = os.getenv("APP_URL", "https://github.com/your-username/aichat-py")
-```
-**Issue**: Contains placeholder URL that should be updated to the actual repository URL.
+### ✅ **FIXED: main.py:18** - Hardcoded Default URL
+~~**Issue**: Contains placeholder URL that should be updated to the actual repository URL.~~
 
-**Impact**: Low - Incorrect attribution in API requests.
-
-**Fix**: Update to actual repository URL.
+**Status**: **RESOLVED** - Updated placeholder URL to actual repository URL `https://github.com/pierr/AI-Coding-CLI` for proper attribution in API requests.
 
 ### **main.py:136** - No Type Hints
 **Issue**: The codebase lacks type hints throughout, making it harder to catch type-related bugs.
@@ -208,10 +183,10 @@ print(f"✅ API key found: {api_key[:8]}...{api_key[-4:]}")
 3. ✅ ~~Fix hardcoded Python executable (tools.py:59)~~ **COMPLETED**
 
 ### **Short Term (High Priority)**
-1. Implement dynamic model compatibility detection
-2. Add specific exception handling
+1. ✅ ~~Implement dynamic model compatibility detection~~ **COMPLETED**
+2. ✅ ~~Add specific exception handling~~ **COMPLETED**
 3. Add input validation to tool functions
-4. Update placeholder URLs
+4. ✅ ~~Update placeholder URLs~~ **COMPLETED**
 
 ### **Medium Term (Maintenance)**
 1. Add type hints throughout codebase

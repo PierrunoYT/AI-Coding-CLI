@@ -15,7 +15,7 @@ import re
 class Config:
     def __init__(self):
         self.api_key = os.getenv("OPENROUTER_API_KEY")
-        self.app_url = os.getenv("APP_URL", "https://github.com/your-username/aichat-py")
+        self.app_url = os.getenv("APP_URL", "https://github.com/pierr/AI-Coding-CLI")
         self.app_name = os.getenv("APP_NAME", "AI Chat CLI (Python)")
         self.default_model = "openai/gpt-4o"
         self.model = self.default_model
@@ -158,7 +158,16 @@ class ChatClient:
         if self.config.agent_mode:
             # Check if the model supports function calling
             model_id = self.config.get_model().lower()
-            supports_functions = any(x in model_id for x in ['gpt-4', 'gpt-3.5', 'claude', 'gemini'])
+            
+            # More comprehensive model compatibility check
+            function_calling_models = [
+                'gpt-4', 'gpt-3.5-turbo', 'gpt-4-turbo', 'gpt-4o',
+                'claude-3', 'claude-3.5', 'claude-2',
+                'gemini-pro', 'gemini-1.5', 'gemini-flash',
+                'mistral-large', 'mistral-medium', 'mixtral',
+                'llama-3', 'llama-3.1', 'llama-3.2'
+            ]
+            supports_functions = any(model in model_id for model in function_calling_models)
             
             if supports_functions:
                 payload["tools"] = TOOLS_DEFINITIONS
@@ -201,7 +210,7 @@ class ChatClient:
                         error_data = response.json()
                         error_msg = error_data.get('error', {}).get('message', str(e))
                         console.print(f"[bold red]API Error (400): {error_msg}[/bold red]")
-                    except:
+                    except (ValueError, KeyError, AttributeError):
                         console.print(f"[bold red]API Error (400): {e}[/bold red]")
                     self.conversation_history.pop() # remove user message if request failed
                     return
