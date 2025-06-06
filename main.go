@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -51,6 +52,7 @@ func printHelp() {
 	fmt.Printf("%s %s\n", yellow("• clear"), green("- Clear the screen"))
 	fmt.Printf("%s %s\n", yellow("• help"), green("- Show this help message"))
 	fmt.Printf("%s %s\n", yellow("• model"), green("- Show current model information"))
+	fmt.Printf("%s %s\n", yellow("• models"), green("- List and select available models"))
 	fmt.Printf("%s %s\n", yellow("• stats"), green("- Show conversation statistics"))
 	fmt.Printf("%s %s\n", yellow("• reset"), green("- Reset conversation history"))
 	fmt.Printf("%s\n", cyan("────────────────────────────────────────────────────────────"))
@@ -65,19 +67,41 @@ func printModelInfo() {
 	fmt.Printf("%s %s\n", yellow("• Current Model:"), green(config.Model))
 	
 	// Display model-specific information based on the model name
-	if strings.Contains(config.Model, "claude-opus-4") {
+	switch {
+	case strings.Contains(config.Model, "gpt-4.1"):
+		fmt.Printf("%s %s\n", yellow("• Context Window:"), green("1,047,576 tokens"))
+		fmt.Printf("%s %s\n", yellow("• Pricing:"), green("$2/M input, $8/M output"))
+		fmt.Printf("%s %s\n", yellow("• Best for:"), green("Advanced coding, long-context reasoning"))
+		fmt.Printf("%s %s\n", yellow("• Features:"), green("54.6% SWE-bench Verified, 87.4% IFEval"))
+	case strings.Contains(config.Model, "gpt-4.1-mini"):
+		fmt.Printf("%s %s\n", yellow("• Context Window:"), green("1M tokens"))
+		fmt.Printf("%s %s\n", yellow("• Pricing:"), green("Lower than GPT-4.1"))
+		fmt.Printf("%s %s\n", yellow("• Best for:"), green("Balanced performance and cost"))
+	case strings.Contains(config.Model, "gpt-4.1-nano"):
+		fmt.Printf("%s %s\n", yellow("• Context Window:"), green("1M tokens"))
+		fmt.Printf("%s %s\n", yellow("• Pricing:"), green("Most cost-effective"))
+		fmt.Printf("%s %s\n", yellow("• Best for:"), green("Fast responses, basic tasks"))
+	case strings.Contains(config.Model, "gpt-4-turbo"):
+		fmt.Printf("%s %s\n", yellow("• Context Window:"), green("128K tokens"))
+		fmt.Printf("%s %s\n", yellow("• Pricing:"), green("$10/M input, $30/M output"))
+		fmt.Printf("%s %s\n", yellow("• Best for:"), green("Complex tasks, coding, analysis"))
+	case strings.Contains(config.Model, "gpt-4-vision"):
+		fmt.Printf("%s %s\n", yellow("• Context Window:"), green("128K tokens"))
+		fmt.Printf("%s %s\n", yellow("• Pricing:"), green("$10/M input, $30/M output"))
+		fmt.Printf("%s %s\n", yellow("• Best for:"), green("Image analysis, multimodal tasks"))
+	case strings.Contains(config.Model, "gpt-3.5-turbo"):
+		fmt.Printf("%s %s\n", yellow("• Context Window:"), green("16K tokens"))
+		fmt.Printf("%s %s\n", yellow("• Pricing:"), green("$0.5/M input, $1.5/M output"))
+		fmt.Printf("%s %s\n", yellow("• Best for:"), green("General tasks, quick responses"))
+	case strings.Contains(config.Model, "claude-opus-4"):
 		fmt.Printf("%s %s\n", yellow("• Context Window:"), green("200,000 tokens"))
 		fmt.Printf("%s %s\n", yellow("• Pricing:"), green("$15/M input, $75/M output"))
 		fmt.Printf("%s %s\n", yellow("• Best for:"), green("Complex reasoning, coding"))
-	} else if strings.Contains(config.Model, "claude-sonnet-4") {
+	case strings.Contains(config.Model, "claude-sonnet-4"):
 		fmt.Printf("%s %s\n", yellow("• Context Window:"), green("200,000 tokens"))
 		fmt.Printf("%s %s\n", yellow("• Pricing:"), green("$3/M input, $15/M output"))
 		fmt.Printf("%s %s\n", yellow("• Best for:"), green("Balanced performance"))
-	} else if strings.Contains(config.Model, "claude-3.5-sonnet") {
-		fmt.Printf("%s %s\n", yellow("• Context Window:"), green("200,000 tokens"))
-		fmt.Printf("%s %s\n", yellow("• Pricing:"), green("$3/M input, $15/M output"))
-		fmt.Printf("%s %s\n", yellow("• Best for:"), green("Best value for money"))
-	} else {
+	default:
 		fmt.Printf("%s %s\n", yellow("• Context Window:"), green("Varies by model"))
 		fmt.Printf("%s %s\n", yellow("• Pricing:"), green("Check OpenRouter for details"))
 	}
@@ -102,6 +126,58 @@ func printStats(stats *EnhancedChatStats) {
 	fmt.Printf("%s %s\n", yellow("• Average Response Time:"), green(fmt.Sprintf("%.2fs", stats.AverageResponseTime)))
 	fmt.Printf("%s %s\n", yellow("• Session Duration:"), green(fmt.Sprintf("%.0f minutes", sessionTime.Minutes())))
 	fmt.Printf("%s\n", cyan("────────────────────────────────────────────────────────────"))
+}
+
+func printModelList(models []ModelInfo) {
+	cyan := color.New(color.FgCyan).SprintFunc()
+	yellow := color.New(color.FgYellow).SprintFunc()
+	green := color.New(color.FgGreen).SprintFunc()
+
+	fmt.Printf("\n%s\n", cyan("Available Models:"))
+	for i, model := range models {
+		fmt.Printf("%s %s\n", yellow(fmt.Sprintf("%d.", i+1)), green(model.ID))
+		fmt.Printf("   %s %s\n", yellow("• Name:"), green(model.Name))
+		fmt.Printf("   %s %s\n", yellow("• Context:"), green(fmt.Sprintf("%d tokens", model.ContextLength)))
+		fmt.Printf("   %s %s\n", yellow("• Pricing:"), green(fmt.Sprintf("$%s/M input, $%s/M output", 
+			model.Pricing.Prompt, model.Pricing.Completion)))
+		if model.Description != "" {
+			fmt.Printf("   %s %s\n", yellow("• Description:"), green(model.Description))
+		}
+		fmt.Println()
+	}
+	fmt.Printf("%s\n", cyan("────────────────────────────────────────────────────────────"))
+}
+
+func selectModel(chatClient *ChatClient) error {
+	models, err := chatClient.GetAvailableModels()
+	if err != nil {
+		return fmt.Errorf("error fetching models: %v", err)
+	}
+
+	printModelList(models)
+
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Enter model number to select (or press Enter to keep current): ")
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return fmt.Errorf("error reading input: %v", err)
+	}
+
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return nil
+	}
+
+	index, err := strconv.Atoi(input)
+	if err != nil || index < 1 || index > len(models) {
+		return fmt.Errorf("invalid model number")
+	}
+
+	selectedModel := models[index-1]
+	config.Model = selectedModel.ID
+	green := color.New(color.FgGreen).SprintFunc()
+	fmt.Printf("\n%s Selected model: %s\n", green("✓"), selectedModel.ID)
+	return nil
 }
 
 func main() {
@@ -160,6 +236,12 @@ func main() {
 			continue
 		case "model":
 			printModelInfo()
+			continue
+		case "models":
+			if err := selectModel(chatClient); err != nil {
+				red := color.New(color.FgRed).SprintFunc()
+				fmt.Printf("\n%s %v\n", red("✗ Error:"), err)
+			}
 			continue
 		case "stats":
 			printStats(stats)

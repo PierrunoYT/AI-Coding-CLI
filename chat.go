@@ -58,6 +58,18 @@ type StreamingResponse struct {
 	Model string `json:"model"`
 }
 
+// ModelInfo represents information about an available model
+type ModelInfo struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	ContextLength int   `json:"context_length"`
+	Pricing     struct {
+		Prompt     string `json:"prompt"`
+		Completion string `json:"completion"`
+	} `json:"pricing"`
+}
+
 // ChatClient handles communication with the OpenRouter API
 type ChatClient struct {
 	config     *Config
@@ -244,4 +256,46 @@ func (c *ChatClient) GetUsage() Usage {
 	// This would typically be tracked from API responses
 	// For now, return empty usage
 	return Usage{}
+}
+
+// GetAvailableModels fetches the list of available models from OpenRouter
+func (c *ChatClient) GetAvailableModels() ([]ModelInfo, error) {
+	// Create request
+	req, err := http.NewRequest("GET", "https://openrouter.ai/api/v1/models", nil)
+	if err != nil {
+		return nil, fmt.Errorf("error creating request: %v", err)
+	}
+
+	// Set headers
+	req.Header.Set("Authorization", "Bearer "+c.config.OpenRouterAPIKey)
+	req.Header.Set("HTTP-Referer", c.config.AppURL)
+	req.Header.Set("X-Title", c.config.AppName)
+
+	// Send request
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error sending request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response: %v", err)
+	}
+
+	// Check for error response
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(body))
+	}
+
+	// Parse response
+	var response struct {
+		Data []ModelInfo `json:"data"`
+	}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("error parsing response: %v", err)
+	}
+
+	return response.Data, nil
 } 
