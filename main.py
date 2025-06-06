@@ -296,13 +296,14 @@ class ChatClient:
                 self.conversation_history.append(final_message)
                 return self.send_chat_request("")  # Continue with empty message to process additional tools
             else:
-                # Display the final AI response
-                self.conversation_history.append(final_message)
-                if final_content:
-                    markdown_content = Markdown(final_content)
-                    console.print(markdown_content)
-                else:
-                    console.print("[italic]AI provided tool results but no additional commentary.[/italic]")
+                            # Display the final AI response
+            self.conversation_history.append(final_message)
+            if final_content:
+                console.print("[bold blue]AI:[/bold blue]")
+                markdown_content = Markdown(final_content)
+                console.print(markdown_content)
+            else:
+                console.print("[bold blue]AI:[/bold blue] [italic]AI provided tool results but no additional commentary.[/italic]")
                 
         else:
             # AI didn't call tools - check if it promised to use any
@@ -323,13 +324,14 @@ class ChatClient:
                         console.print("[dim]Asking AI to follow through with promised actions...[/dim]")
                         return self.send_chat_request(follow_up)
             
-            # Add AI message to conversation and display it
-            self.conversation_history.append(ai_message)
-            if ai_content:
-                markdown_content = Markdown(ai_content)
-                console.print(markdown_content)
-            else:
-                console.print("[italic]AI sent an empty response.[/italic]")
+                    # Add AI message to conversation and display it
+        self.conversation_history.append(ai_message)
+        if ai_content:
+            console.print("[bold blue]AI:[/bold blue]")
+            markdown_content = Markdown(ai_content)
+            console.print(markdown_content)
+        else:
+            console.print("[bold blue]AI:[/bold blue] [italic]AI sent an empty response.[/italic]")
 
     def _execute_single_tool(self, tool_call):
         """Execute a single tool call and return the result."""

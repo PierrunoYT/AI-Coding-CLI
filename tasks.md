@@ -167,6 +167,13 @@ A comprehensive command-line chat application that integrates with OpenRouter's 
   - Recommended model suggestions
   - Graceful degradation when tools aren't supported
 
+#### ✅ **UI/UX Improvements**
+- **Response Labeling Fix**:
+  - Fixed issue where AI responses were not properly labeled
+  - Added clear "AI:" label before all AI responses
+  - Consistent formatting for both tool-based and regular responses
+  - Better visual distinction between user and AI messages
+
 #### ✅ **Smart Tool Promise Detection System** 🎯
 - **Behavioral Analysis**:
   - Pattern detection for AI promises using regex patterns

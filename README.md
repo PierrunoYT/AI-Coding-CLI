@@ -2,6 +2,15 @@
 
 A powerful command-line chat application that uses OpenRouter's API to interact with various AI models. Features both regular chat and coding agent modes for enhanced productivity.
 
+## Recent Updates
+
+### 🆕 Latest Features & Fixes
+- **✅ Fixed AI Response Labeling**: AI responses now properly display with "AI:" label instead of just showing "you:"
+- **🎯 Smart Tool Promise Detection**: Automatically detects when AI promises to use tools but doesn't follow through
+- **⚡ Parallel Tool Execution**: Run multiple tools simultaneously for faster operation
+- **🛡️ Enhanced Error Recovery**: Improved handling of API errors with automatic retries
+- **🔧 Model Compatibility Checks**: Better detection and warnings for models that don't support function calling
+
 ## Features
 
 - **Interactive Chat Interface**: Rich text UI powered by `rich` library
