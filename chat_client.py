@@ -247,13 +247,17 @@ class ChatClient:
                     if "tool_choice" in final_payload_retry:
                         del final_payload_retry["tool_choice"]
                     
-                    final_response = requests.post(
-                        f"{self.api_base}/chat/completions",
-                        headers=self.headers,
-                        json=final_payload_retry
-                    )
-                    final_response.raise_for_status()
-                    final_data = final_response.json()
+                    try:
+                        final_response = requests.post(
+                            f"{self.api_base}/chat/completions",
+                            headers=self.headers,
+                            json=final_payload_retry
+                        )
+                        final_response.raise_for_status()
+                        final_data = final_response.json()
+                    except requests.exceptions.RequestException as retry_e:
+                        console.print(f"[bold red]API Error in final call retry: {retry_e}[/bold red]")
+                        return
                 else:
                     console.print(f"[bold red]API Error in final call: {e}[/bold red]")
                     return
