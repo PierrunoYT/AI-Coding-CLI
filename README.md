@@ -10,6 +10,7 @@ A powerful command-line chat application that uses OpenRouter's API to interact 
 - **Dynamic Model Selection**: Choose from a filterable list of available models
 - **File System Operations**: List, read, write, and manage files and directories
 - **Code Execution**: Run Python scripts with safety confirmations
+- **Smart Tool Promise Detection**: Automatically detects when AI promises to use tools but doesn't follow through
 - **Conversation History**: Maintained during the session with full context
 - **Token Usage Tracking**: Monitor API usage and statistics
 - **Intuitive Commands**: Simple CLI interface with helpful commands
@@ -118,6 +119,12 @@ Enable powerful coding assistance by typing `/agent` to toggle agent mode. When 
   - Faster execution for independent operations
   - Progress bar shows completion status
   - Perfect for bulk file operations
+
+### Smart Tool Promise Detection 🎯
+The CLI now automatically detects when the AI says it will use a tool (like "let me check the files" or "I'll read that file") but doesn't actually call the function. When this happens:
+- You'll see a warning message highlighting the oversight
+- You can choose to ask the AI to follow through with its promise
+- This helps ensure the AI actually performs the actions it describes
 
 ### Example Agent Tasks
 

@@ -61,6 +61,7 @@ The heart of the application containing:
 #### **Tool Orchestration**
 - Sequential and parallel tool execution
 - Tool call limiting and safety measures
+- Smart tool promise detection with behavioral analysis
 - Result processing and display
 - Conversation history management
 

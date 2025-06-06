@@ -9,6 +9,7 @@ from rich.table import Table
 from rich.markdown import Markdown
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 from tools import TOOLS_DEFINITIONS, AVAILABLE_TOOLS
+import re
 
 # --- Configuration ---
 class Config:
@@ -96,6 +97,42 @@ class ChatClient:
             console.print(f"[bold red]Error fetching models: {e}[/bold red]")
             return None
 
+    def _detect_promised_but_uncalled_tools(self, ai_message_content):
+        """
+        Detect when AI promises to use tools but doesn't actually call them.
+        Returns a list of tools that were promised but not called.
+        """
+        if not ai_message_content:
+            return []
+        
+        # Common patterns where AI promises to use tools
+        promise_patterns = [
+            r"let me (?:check|list|read|write|create|delete|execute|run)\s+(?:the\s+)?(.+)",
+            r"I(?:'ll|'m going to|will) (?:check|list|read|write|create|delete|execute|run)\s+(?:the\s+)?(.+)",
+            r"(?:checking|listing|reading|writing|creating|deleting|executing|running)\s+(?:the\s+)?(.+)",
+            r"I(?:'ll|will) (?:now\s+)?(?:proceed to\s+)?(?:check|list|read|write|create|delete|execute|run)",
+        ]
+        
+        promised_actions = []
+        content_lower = ai_message_content.lower()
+        
+        for pattern in promise_patterns:
+            matches = re.findall(pattern, content_lower, re.IGNORECASE)
+            promised_actions.extend(matches)
+        
+        # Look for specific tool-related keywords
+        tool_keywords = [
+            "file list", "directory", "check the file", "read the file", 
+            "write to", "create file", "delete file", "list files"
+        ]
+        
+        found_promises = []
+        for keyword in tool_keywords:
+            if keyword in content_lower:
+                found_promises.append(keyword)
+        
+        return found_promises
+
     def send_chat_request(self, message):
         self.conversation_history.append({"role": "user", "content": message})
         
@@ -104,7 +141,7 @@ class ChatClient:
                                      self.conversation_history[0].get("role") != "system"):
             system_message = {
                 "role": "system", 
-                "content": "You are a helpful coding assistant with access to file system tools. You can list files, read files, write files, execute Python scripts, create directories, and delete files. Use these tools when the user asks you to work with files or code. Always explain what you're doing before using tools."
+                "content": "You are a helpful coding assistant with access to file system tools. You can list files, read files, write files, execute Python scripts, create directories, and delete files. Use these tools when the user asks you to work with files or code. Always explain what you're doing before using tools. IMPORTANT: When you promise to use a tool (like 'let me check the files' or 'I'll read that file'), you MUST actually call the appropriate tool function. Don't just say you will do something - actually do it by calling the function."
             }
             self.conversation_history.insert(0, system_message)
         
@@ -170,13 +207,14 @@ class ChatClient:
         except requests.exceptions.RequestException as e:
             console.print(f"[bold red]API Error: {e}[/bold red]")
             self.conversation_history.pop() # remove user message if request failed
+            return
 
         # Handle usage stats
         if "usage" in data:
             self.total_tokens += data['usage']['total_tokens']
         
         ai_message = data['choices'][0]['message']
-        self.conversation_history.append(ai_message)
+        ai_content = ai_message.get('content', '')
         
         # Check if AI wants to use tools
         if ai_message.get('tool_calls'):
@@ -190,7 +228,9 @@ class ChatClient:
                 num_tools = len(tool_calls)
             
             execution_mode = self.config.tool_execution_mode
-            console.print(f"[bold cyan]�� Assistant is using {num_tools} tool(s) in {execution_mode} mode...[/bold cyan]")
+            console.print(f"[bold cyan]🤖 Assistant is using {num_tools} tool(s) in {execution_mode} mode...[/bold cyan]")
+            
+            self.conversation_history.append(ai_message)
             
             if execution_mode == "parallel" and num_tools > 1:
                 # Execute tools in parallel
@@ -198,55 +238,33 @@ class ChatClient:
             else:
                 # Execute tools sequentially
                 self._execute_tools_sequential(tool_calls)
-            
-            # Get final response after tool execution
-            final_payload = {
-                "model": self.config.get_model(),
-                "messages": self.conversation_history,
-            }
-            
-            # Only add tools if the model supports them
-            model_id = self.config.get_model().lower()
-            supports_functions = any(x in model_id for x in ['gpt-4', 'gpt-3.5', 'claude', 'gemini'])
-            if supports_functions:
-                final_payload["tools"] = TOOLS_DEFINITIONS
-                final_payload["tool_choice"] = "auto"
-            
-            try:
-                final_response = requests.post(
-                    f"{self.api_base}/chat/completions",
-                    headers=self.headers,
-                    json=final_payload
-                )
-                final_response.raise_for_status()
-                final_data = final_response.json()
-            except requests.exceptions.HTTPError as e:
-                if final_response.status_code == 400:
-                    # Try again without tool_choice if it's a 400 error
-                    console.print("[yellow]⚠️  Tool choice parameter causing issues in final call, retrying without it...[/yellow]")
-                    final_payload_retry = final_payload.copy()
-                    del final_payload_retry["tool_choice"]
-                    
-                    final_response = requests.post(
-                        f"{self.api_base}/chat/completions",
-                        headers=self.headers,
-                        json=final_payload_retry
-                    )
-                    final_response.raise_for_status()
-                    final_data = final_response.json()
-                else:
-                    console.print(f"[bold red]API Error in final call: {e}[/bold red]")
-                    return
-            
-            if "usage" in final_data:
-                self.total_tokens += final_data['usage']['total_tokens']
-            
-            final_message = final_data['choices'][0]['message']
-            console.print(f"\n[bold cyan]AI:[/bold cyan] {final_message['content']}")
-            self.conversation_history.append(final_message)
+                
         else:
-            # No tools called, just print the response
-            console.print(f"[bold cyan]AI:[/bold cyan] {ai_message['content']}")
+            # AI didn't call tools - check if it promised to use any
+            if self.config.agent_mode and ai_content:
+                promised_tools = self._detect_promised_but_uncalled_tools(ai_content)
+                
+                if promised_tools:
+                    console.print(f"[bold yellow]⚠️  AI promised to use tools but didn't call them: {', '.join(promised_tools)}[/bold yellow]")
+                    console.print("[yellow]This might be an AI oversight. The response was provided without tool execution.[/yellow]")
+                    
+                    # Ask user if they want to retry
+                    retry = console.input("[bold]Would you like me to ask the AI to actually follow through? (y/N): [/bold]").lower().strip()
+                    
+                    if retry == 'y':
+                        # Don't add the problematic AI message to history yet
+                        # Add a follow-up message to encourage tool use
+                        follow_up = "Please actually follow through with the tools you mentioned. Don't just describe what you would do - actually call the appropriate functions to perform the actions you promised."
+                        console.print("[dim]Asking AI to follow through with promised actions...[/dim]")
+                        return self.send_chat_request(follow_up)
+            
+            # Add AI message to conversation and display it
+            self.conversation_history.append(ai_message)
+            if ai_content:
+                markdown_content = Markdown(ai_content)
+                console.print(markdown_content)
+            else:
+                console.print("[italic]AI sent an empty response.[/italic]")
 
     def _execute_single_tool(self, tool_call):
         """Execute a single tool call and return the result."""
@@ -410,10 +428,14 @@ When agent mode is enabled, the AI has access to these tools:
 - **File Operations**: List, read, write, and delete files
 - **Directory Operations**: Create directories and navigate file system
 - **Code Execution**: Run Python scripts (with user confirmation)
+- **Promise Detection**: Automatically detects when AI promises to use tools but doesn't
 
 ## Tool Execution Modes
 - **Sequential**: Tools run one after another (safer, shows progress)
 - **Parallel**: Tools run simultaneously (faster for independent operations)
+
+## Smart Tool Promise Detection 🎯
+The CLI now automatically detects when the AI says it will use a tool (like "let me check the files") but doesn't actually call the function. When this happens, you'll get a warning and option to make the AI follow through!
 
 Agent mode is perfect for coding tasks, file management, and automation!
     """)

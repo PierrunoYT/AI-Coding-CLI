@@ -167,6 +167,24 @@ A comprehensive command-line chat application that integrates with OpenRouter's 
   - Recommended model suggestions
   - Graceful degradation when tools aren't supported
 
+#### ✅ **Smart Tool Promise Detection System** 🎯
+- **Behavioral Analysis**:
+  - Pattern detection for AI promises using regex patterns
+  - Recognition of phrases like "let me check", "I'll read", "I will list"
+  - Keyword-based detection for file operations
+  - Content analysis without tool call execution
+
+- **User Intervention System**:
+  - Automatic warning when promises are detected but tools not called
+  - Interactive prompt asking user if they want AI to follow through
+  - Retry mechanism with follow-up message to encourage tool use
+  - Graceful handling when user declines retry
+
+- **Enhanced System Prompts**:
+  - Updated system message emphasizing actual tool usage
+  - Clear instructions to follow through on promises
+  - Guidance to call functions rather than just describing actions
+
 #### ✅ **Debug & Diagnostics System**
 - **Debug Mode** (`DEBUG=true`):
   - Detailed API request logging
