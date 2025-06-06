@@ -1,16 +1,18 @@
 # AI Chat CLI (Python)
 
-A simple command-line chat application that uses OpenRouter's API to interact with various AI models. This is a Python port of the original Go project.
+A powerful command-line chat application that uses OpenRouter's API to interact with various AI models. Features both regular chat and coding agent modes for enhanced productivity.
 
 ## Features
 
-- Interactive chat interface with rich text, powered by `rich`
-- Support for all AI models available through OpenRouter
-- Dynamic model selection from a filterable list
-- Streaming responses for instant interaction
-- Conversation history maintained during the session
-- Token usage and statistics tracking
-- Simple and clean CLI interface with intuitive commands
+- **Interactive Chat Interface**: Rich text UI powered by `rich` library
+- **Coding Agent Mode**: AI assistant with file system tools for development tasks
+- **Universal Model Support**: Access to all AI models available through OpenRouter
+- **Dynamic Model Selection**: Choose from a filterable list of available models
+- **File System Operations**: List, read, write, and manage files and directories
+- **Code Execution**: Run Python scripts with safety confirmations
+- **Conversation History**: Maintained during the session with full context
+- **Token Usage Tracking**: Monitor API usage and statistics
+- **Intuitive Commands**: Simple CLI interface with helpful commands
 
 ## Prerequisites
 
@@ -55,13 +57,38 @@ python main.py
 
 ## Available Commands
 
-- `/help` - Show available commands
+- `/help` - Show available commands and agent mode information
 - `/model` - Show current model information
 - `/models` - List and select from all available OpenRouter models
+- `/agent` - Toggle coding agent mode (enables file system tools)
 - `/stats` - Show conversation statistics
 - `/reset` - Reset conversation history
 - `/clear` - Clear the screen
 - `/exit` - Exit the application
+
+## Coding Agent Mode
+
+Enable powerful coding assistance by typing `/agent` to toggle agent mode. When enabled, the AI assistant has access to these tools:
+
+### File Operations
+- **List Files**: Browse directories and see file structure
+- **Read Files**: View file contents
+- **Write Files**: Create or modify files
+- **Delete Files**: Remove files (with confirmation)
+
+### Directory Operations
+- **Create Directories**: Make new folders for project organization
+
+### Code Execution
+- **Run Python Scripts**: Execute Python files with safety confirmations and timeout protection
+
+### Example Agent Tasks
+Try these commands in agent mode:
+- "List the files in the current directory"
+- "Create a Python script that prints 'Hello World' and save it as hello.py"
+- "Read the contents of main.py"
+- "Execute the hello.py script"
+- "Create a new directory called 'projects'"
 
 ## Model Selection
 

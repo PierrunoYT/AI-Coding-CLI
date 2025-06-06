@@ -4,6 +4,7 @@ import json
 from rich.console import Console
 from rich.table import Table
 from rich.markdown import Markdown
+from tools import TOOLS_DEFINITIONS, AVAILABLE_TOOLS
 
 # --- Configuration ---
 class Config:
@@ -13,12 +14,17 @@ class Config:
         self.app_name = os.getenv("APP_NAME", "AI Chat CLI (Python)")
         self.default_model = "openai/gpt-4o"
         self.model = self.default_model
+        self.agent_mode = False  # Toggle for coding agent mode
 
     def get_model(self):
         return self.model
 
     def set_model(self, model_id):
         self.model = model_id
+    
+    def toggle_agent_mode(self):
+        self.agent_mode = not self.agent_mode
+        return self.agent_mode
 
 # --- API Client ---
 class ChatClient:
@@ -48,49 +54,91 @@ class ChatClient:
     def send_chat_request(self, message):
         self.conversation_history.append({"role": "user", "content": message})
         
+        # Add system message for agent mode if not already present
+        if self.config.agent_mode and (not self.conversation_history or 
+                                     self.conversation_history[0].get("role") != "system"):
+            system_message = {
+                "role": "system", 
+                "content": "You are a helpful coding assistant with access to file system tools. You can list files, read files, write files, execute Python scripts, create directories, and delete files. Use these tools when the user asks you to work with files or code. Always explain what you're doing before using tools."
+            }
+            self.conversation_history.insert(0, system_message)
+        
         payload = {
             "model": self.config.get_model(),
             "messages": self.conversation_history,
-            "stream": True,
+            "stream": False,  # Disable streaming for function calls
         }
+        
+        # Add tools if in agent mode
+        if self.config.agent_mode:
+            payload["tools"] = TOOLS_DEFINITIONS
+            payload["tool_choice"] = "auto"
 
         try:
             response = requests.post(
                 f"{self.api_base}/chat/completions",
                 headers=self.headers,
-                json=payload,
-                stream=True
+                json=payload
             )
             response.raise_for_status()
+            data = response.json()
             
-            full_response = ""
-            console.print("[bold cyan]AI:[/bold cyan] ", end="")
-            for chunk in response.iter_lines():
-                if chunk:
-                    chunk_str = chunk.decode('utf-8')
-                    if chunk_str.startswith("data:"):
-                        data_str = chunk_str[len("data: "):]
-                        if data_str.strip() == "[DONE]":
-                            break
-                        try:
-                            data = json.loads(data_str)
-                            
-                            # Handle usage stats in the last message
-                            if "usage" in data:
-                                self.total_tokens += data['usage']['total_tokens']
-                                # cost calculation might need pricing info
-                                continue
-
-                            delta = data.get("choices", [{}])[0].get("delta", {})
-                            content = delta.get("content", "")
-                            if content:
-                                full_response += content
-                                console.print(content, end="")
-                        except json.JSONDecodeError:
-                            console.print(f"[bold red]Error decoding JSON stream chunk: {data_str}[/bold red]")
+            # Handle usage stats
+            if "usage" in data:
+                self.total_tokens += data['usage']['total_tokens']
             
-            console.print() # for newline
-            self.conversation_history.append({"role": "assistant", "content": full_response})
+            ai_message = data['choices'][0]['message']
+            self.conversation_history.append(ai_message)
+            
+            # Check if AI wants to use tools
+            if ai_message.get('tool_calls'):
+                console.print("[bold cyan]🤖 Assistant is using tools...[/bold cyan]")
+                
+                for tool_call in ai_message['tool_calls']:
+                    function_name = tool_call['function']['name']
+                    function_to_call = AVAILABLE_TOOLS.get(function_name)
+                    
+                    if function_to_call:
+                        function_args = json.loads(tool_call['function']['arguments'])
+                        console.print(f"   🔧 Calling `{function_name}` with args: {function_args}")
+                        
+                        # Call the actual Python function
+                        function_response = function_to_call(**function_args)
+                        console.print(f"   📋 Tool response: {function_response}")
+                        
+                        # Add tool response to conversation
+                        self.conversation_history.append({
+                            "tool_call_id": tool_call['id'],
+                            "role": "tool",
+                            "name": function_name,
+                            "content": function_response,
+                        })
+                
+                # Get final response after tool execution
+                final_payload = {
+                    "model": self.config.get_model(),
+                    "messages": self.conversation_history,
+                    "tools": TOOLS_DEFINITIONS,
+                    "tool_choice": "auto"
+                }
+                
+                final_response = requests.post(
+                    f"{self.api_base}/chat/completions",
+                    headers=self.headers,
+                    json=final_payload
+                )
+                final_response.raise_for_status()
+                final_data = final_response.json()
+                
+                if "usage" in final_data:
+                    self.total_tokens += final_data['usage']['total_tokens']
+                
+                final_message = final_data['choices'][0]['message']
+                console.print(f"\n[bold cyan]AI:[/bold cyan] {final_message['content']}")
+                self.conversation_history.append(final_message)
+            else:
+                # No tools called, just print the response
+                console.print(f"[bold cyan]AI:[/bold cyan] {ai_message['content']}")
 
         except requests.exceptions.RequestException as e:
             console.print(f"[bold red]API Error: {e}[/bold red]")
@@ -122,10 +170,19 @@ def print_help():
 - `/help`: Show this help message.
 - `/model`: Show the current AI model.
 - `/models`: List and select from available models.
+- `/agent`: Toggle coding agent mode (enables file system tools).
 - `/stats`: Show conversation statistics.
 - `/reset`: Reset the conversation history.
 - `/clear`: Clear the console screen.
 - `/exit`: Exit the application.
+
+## Coding Agent Mode
+When agent mode is enabled, the AI has access to these tools:
+- **File Operations**: List, read, write, and delete files
+- **Directory Operations**: Create directories and navigate file system
+- **Code Execution**: Run Python scripts (with user confirmation)
+
+Agent mode is perfect for coding tasks, file management, and automation!
     """)
     console.print(markdown)
 
@@ -199,6 +256,7 @@ def main():
     console.print("[bold]Welcome to AI Chat CLI![/bold]")
     console.print(f"Type a message to start chatting or `/help` for commands.")
     console.print(f"Using model: [cyan]{client.config.get_model()}[/cyan]")
+    console.print(f"Agent mode: [yellow]{'🤖 ON' if client.config.agent_mode else '💬 OFF'}[/yellow] (type `/agent` to toggle)")
 
     try:
         while True:
@@ -218,6 +276,14 @@ def main():
                     console.print(f"Current model: [cyan]{client.config.get_model()}[/cyan]")
                 elif command == "/models":
                     select_model(client)
+                elif command == "/agent":
+                    agent_status = client.config.toggle_agent_mode()
+                    status_text = "🤖 ON" if agent_status else "💬 OFF"
+                    console.print(f"[bold yellow]Agent mode: {status_text}[/bold yellow]")
+                    if agent_status:
+                        console.print("[green]✅ Coding agent tools are now available![/green]")
+                    else:
+                        console.print("[yellow]💬 Back to regular chat mode.[/yellow]")
                 elif command == "/stats":
                     client.show_stats()
                 else:
