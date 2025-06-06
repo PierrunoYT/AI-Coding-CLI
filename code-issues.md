@@ -31,15 +31,10 @@ supports_functions = any(x in model_id for x in ['gpt-4', 'gpt-3.5', 'claude', '
 
 **Fix**: Consider a more dynamic approach or configuration-based model capability detection.
 
-### **tools.py:59** - Hardcoded Python Executable
-```python
-result = subprocess.run(["python", filename], ...)
-```
-**Issue**: Uses hardcoded "python" command which may not exist on all systems (some use "python3").
+### ✅ **FIXED: tools.py:59** - Hardcoded Python Executable
+~~**Issue**: Uses hardcoded "python" command which may not exist on all systems (some use "python3").~~
 
-**Impact**: Medium-High - Script execution may fail on systems without "python" alias.
-
-**Fix**: Use `sys.executable` or check for available Python executable.
+**Status**: **RESOLVED** - Replaced hardcoded "python" with `sys.executable` to use the same Python interpreter that's running the application, ensuring compatibility across all systems.
 
 ---
 
@@ -210,7 +205,7 @@ print(f"✅ API key found: {api_key[:8]}...{api_key[-4:]}")
 ### **Immediate (Critical)**
 1. ✅ ~~Fix conversation history logic flow issue (main.py:326-327)~~ **COMPLETED**
 2. ✅ ~~Fix undefined response variable issue (main.py:79)~~ **COMPLETED**
-3. Fix hardcoded Python executable (tools.py:59)
+3. ✅ ~~Fix hardcoded Python executable (tools.py:59)~~ **COMPLETED**
 
 ### **Short Term (High Priority)**
 1. Implement dynamic model compatibility detection

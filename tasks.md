@@ -441,6 +441,7 @@ supports_functions = any(x in model_id for x in [
 - ✅ **NEW**: Fixed conversation history logic flow issue preventing duplicate messages
 - ✅ **NEW**: Added comprehensive code issues analysis and documentation
 - ✅ **NEW**: Fixed undefined response variable in error handling preventing crashes
+- ✅ **NEW**: Fixed hardcoded Python executable using sys.executable for cross-platform compatibility
 
 ### **New Features Added**
 - ✅ Debug mode with comprehensive logging

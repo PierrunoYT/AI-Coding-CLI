@@ -1,6 +1,7 @@
 # tools.py
 import os
 import subprocess
+import sys
 from rich.console import Console
 
 console = Console()
@@ -56,7 +57,7 @@ def execute_python_file(filename):
 
     try:
         result = subprocess.run(
-            ["python", filename],
+            [sys.executable, filename],
             capture_output=True,
             text=True,
             check=True,
