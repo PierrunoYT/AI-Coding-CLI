@@ -8,6 +8,8 @@ A comprehensive command-line chat application that integrates with OpenRouter's 
 ### **Issues Fixed**
 1. **Enhanced Model Compatibility Detection** - Replaced hardcoded model checks with comprehensive list including GPT-4, Claude-3, Gemini, Mistral, and LLaMA variants
 2. **Improved Exception Handling** - Replaced bare except clauses with specific exception types (ValueError, KeyError, AttributeError)
+3. **Code Cleanup & Security** - Removed commented code, fixed API key logging security issue, added comprehensive input validation
+4. **Input Validation** - Added validation for empty filenames, directory names, and other parameters in all tool functions
 3. **Fixed Schema Compatibility** - Removed non-standard `default` field from OpenAI function definitions
 4. **Updated Repository URL** - Fixed placeholder URL to actual repository location
 

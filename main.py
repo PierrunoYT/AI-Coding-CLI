@@ -480,7 +480,7 @@ class ChatClient:
             table.add_row("Tool Execution", f"{execution_emoji} {self.config.tool_execution_mode.upper()}")
             table.add_row("Max Tool Calls", str(self.config.max_tool_calls))
         table.add_row("Total Tokens", str(self.total_tokens))
-        # table.add_row("Estimated Cost", f"${self.total_cost:.6f}") # Add cost calculation later
+        table.add_row("Estimated Cost", f"${self.total_cost:.6f}")
         table.add_row("History Length", f"{len(self.conversation_history)} messages")
         console.print(table)
 

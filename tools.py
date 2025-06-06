@@ -29,6 +29,8 @@ def list_files(directory="."):
 def write_to_file(filename, content):
     """Writes the given content to a specified file."""
     try:
+        if not filename or not filename.strip():
+            return "❌ Error: Filename cannot be empty."
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(content)
         return f"✅ Successfully wrote to {filename}."
@@ -38,6 +40,8 @@ def write_to_file(filename, content):
 def read_file(filename):
     """Reads the content of a specified file."""
     try:
+        if not filename or not filename.strip():
+            return "❌ Error: Filename cannot be empty."
         with open(filename, 'r', encoding='utf-8') as f:
             content = f.read()
         return f"📄 Content of {filename}:\n{content}"
@@ -89,6 +93,8 @@ def execute_python_file(filename):
 def create_directory(directory_name):
     """Creates a new directory."""
     try:
+        if not directory_name or not directory_name.strip():
+            return "❌ Error: Directory name cannot be empty."
         os.makedirs(directory_name, exist_ok=True)
         return f"📁 Successfully created directory: {directory_name}"
     except Exception as e:
@@ -97,6 +103,8 @@ def create_directory(directory_name):
 def delete_file(filename):
     """Deletes a specified file."""
     try:
+        if not filename or not filename.strip():
+            return "❌ Error: Filename cannot be empty."
         if not os.path.exists(filename):
             return f"❌ File '{filename}' does not exist."
         
@@ -114,6 +122,8 @@ def delete_file(filename):
 def append_to_file(filename, content):
     """Appends content to the end of a specified file."""
     try:
+        if not filename or not filename.strip():
+            return "❌ Error: Filename cannot be empty."
         with open(filename, 'a', encoding='utf-8') as f:
             f.write(content)
         return f"➕ Successfully appended to {filename}."
@@ -123,6 +133,10 @@ def append_to_file(filename, content):
 def replace_in_file(filename, old_text, new_text):
     """Replaces all occurrences of old_text with new_text in a file."""
     try:
+        if not filename or not filename.strip():
+            return "❌ Error: Filename cannot be empty."
+        if not old_text:
+            return "❌ Error: Old text cannot be empty."
         if not os.path.exists(filename):
             return f"❌ File '{filename}' does not exist."
         

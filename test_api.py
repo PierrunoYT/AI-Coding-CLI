@@ -13,7 +13,7 @@ def test_openrouter_connection():
         print("Please set it with: export OPENROUTER_API_KEY=your_key_here")
         return False
     
-    print(f"✅ API key found: {api_key[:8]}...{api_key[-4:]}")
+    print("✅ API key found and loaded")
     
     headers = {
         "Authorization": f"Bearer {api_key}",
