@@ -106,6 +106,98 @@ def delete_file(filename):
     except Exception as e:
         return f"❌ Error deleting file: {e}"
 
+def append_to_file(filename, content):
+    """Appends content to the end of a specified file."""
+    try:
+        with open(filename, 'a', encoding='utf-8') as f:
+            f.write(content)
+        return f"➕ Successfully appended to {filename}."
+    except Exception as e:
+        return f"❌ Error appending to file: {e}"
+
+def replace_in_file(filename, old_text, new_text):
+    """Replaces all occurrences of old_text with new_text in a file."""
+    try:
+        if not os.path.exists(filename):
+            return f"❌ File '{filename}' does not exist."
+        
+        with open(filename, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        if old_text not in content:
+            return f"❌ Text '{old_text}' not found in {filename}."
+        
+        new_content = content.replace(old_text, new_text)
+        
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write(new_content)
+        
+        occurrences = content.count(old_text)
+        return f"🔄 Successfully replaced {occurrences} occurrence(s) of '{old_text}' with '{new_text}' in {filename}."
+    except Exception as e:
+        return f"❌ Error replacing text in file: {e}"
+
+def insert_line_at_position(filename, line_number, content):
+    """Inserts a line at a specific position in a file (1-based line numbering)."""
+    try:
+        if not os.path.exists(filename):
+            return f"❌ File '{filename}' does not exist."
+        
+        with open(filename, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        
+        if line_number < 1 or line_number > len(lines) + 1:
+            return f"❌ Invalid line number {line_number}. File has {len(lines)} lines."
+        
+        # Convert to 0-based indexing
+        insert_index = line_number - 1
+        
+        # Ensure content ends with newline if it doesn't already
+        if not content.endswith('\n'):
+            content += '\n'
+        
+        lines.insert(insert_index, content)
+        
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.writelines(lines)
+        
+        return f"📝 Successfully inserted line at position {line_number} in {filename}."
+    except Exception as e:
+        return f"❌ Error inserting line in file: {e}"
+
+def read_file_lines(filename, start_line=None, end_line=None):
+    """Reads specific lines from a file (1-based line numbering)."""
+    try:
+        if not os.path.exists(filename):
+            return f"❌ File '{filename}' does not exist."
+        
+        with open(filename, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+        
+        total_lines = len(lines)
+        
+        if start_line is None:
+            start_line = 1
+        if end_line is None:
+            end_line = total_lines
+        
+        if start_line < 1 or end_line < 1 or start_line > total_lines:
+            return f"❌ Invalid line range. File has {total_lines} lines."
+        
+        # Convert to 0-based indexing
+        start_idx = start_line - 1
+        end_idx = min(end_line, total_lines)
+        
+        selected_lines = lines[start_idx:end_idx]
+        
+        result = f"📄 Lines {start_line}-{end_idx} of {filename}:\n"
+        for i, line in enumerate(selected_lines, start=start_line):
+            result += f"{i:4}: {line.rstrip()}\n"
+        
+        return result
+    except Exception as e:
+        return f"❌ Error reading file lines: {e}"
+
 # Tool definitions for the API
 TOOLS_DEFINITIONS = [
     {
@@ -197,6 +289,69 @@ TOOLS_DEFINITIONS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "append_to_file",
+            "description": "Append content to the end of a file without overwriting existing content.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filename": {"type": "string", "description": "The name of the file to append to."},
+                    "content": {"type": "string", "description": "The content to append to the file."}
+                },
+                "required": ["filename", "content"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "replace_in_file",
+            "description": "Replace all occurrences of specific text in a file with new text.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filename": {"type": "string", "description": "The name of the file to modify."},
+                    "old_text": {"type": "string", "description": "The text to find and replace."},
+                    "new_text": {"type": "string", "description": "The text to replace with."}
+                },
+                "required": ["filename", "old_text", "new_text"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "insert_line_at_position",
+            "description": "Insert a new line at a specific position in a file (1-based line numbering).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filename": {"type": "string", "description": "The name of the file to modify."},
+                    "line_number": {"type": "integer", "description": "The line number where to insert (1-based)."},
+                    "content": {"type": "string", "description": "The content to insert."}
+                },
+                "required": ["filename", "line_number", "content"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_file_lines",
+            "description": "Read specific lines from a file with line numbers (1-based numbering).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filename": {"type": "string", "description": "The name of the file to read."},
+                    "start_line": {"type": "integer", "description": "The starting line number (1-based). If not provided, starts from line 1."},
+                    "end_line": {"type": "integer", "description": "The ending line number (1-based). If not provided, reads to end of file."}
+                },
+                "required": ["filename"],
+            },
+        },
+    },
 ]
 
 # Available tools mapping
@@ -207,4 +362,8 @@ AVAILABLE_TOOLS = {
     "execute_python_file": execute_python_file,
     "create_directory": create_directory,
     "delete_file": delete_file,
+    "append_to_file": append_to_file,
+    "replace_in_file": replace_in_file,
+    "insert_line_at_position": insert_line_at_position,
+    "read_file_lines": read_file_lines,
 } 

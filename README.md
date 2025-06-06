@@ -72,8 +72,12 @@ Enable powerful coding assistance by typing `/agent` to toggle agent mode. When 
 
 ### File Operations
 - **List Files**: Browse directories and see file structure
-- **Read Files**: View file contents
-- **Write Files**: Create or modify files
+- **Read Files**: View file contents or specific line ranges
+- **Write Files**: Create new files or completely overwrite existing ones
+- **Edit Files**: Advanced editing capabilities:
+  - **Append**: Add content to the end of files
+  - **Replace**: Find and replace text throughout files
+  - **Insert**: Add lines at specific positions
 - **Delete Files**: Remove files (with confirmation)
 
 ### Directory Operations
@@ -84,11 +88,19 @@ Enable powerful coding assistance by typing `/agent` to toggle agent mode. When 
 
 ### Example Agent Tasks
 Try these commands in agent mode:
+
+**Basic Operations:**
 - "List the files in the current directory"
 - "Create a Python script that prints 'Hello World' and save it as hello.py"
 - "Read the contents of main.py"
 - "Execute the hello.py script"
 - "Create a new directory called 'projects'"
+
+**Advanced Editing:**
+- "Read lines 1-10 of main.py"
+- "Append a comment to the end of hello.py"
+- "Replace 'Hello World' with 'Hello Coding Agent' in hello.py"
+- "Insert a new import statement at line 2 in main.py"
 
 ## Model Selection
 
