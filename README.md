@@ -1,6 +1,6 @@
 # AI Chat CLI
 
-A simple command-line chat application that uses OpenRouter's API to interact with various AI models, including the latest Claude 4 models.
+A simple command-line chat application that uses OpenRouter's API to interact with various AI models, including the latest Claude models.
 
 ## Features
 
@@ -10,7 +10,7 @@ A simple command-line chat application that uses OpenRouter's API to interact wi
 - Simple and clean CLI interface
 - Token usage tracking
 - Support for streaming responses
-- Latest Claude 4 model support
+- Latest Claude model support
 
 ## Prerequisites
 
@@ -66,20 +66,38 @@ The following environment variables can be configured:
 
 ## Available Models
 
-OpenRouter supports various models from different providers. Here are the latest Claude 4 models:
+OpenRouter supports various models from different providers. Here are the available Claude models:
 
 ### Claude 4 Models
-- `anthropic/claude-opus-4` (Default) - Most capable model, best for complex tasks
+- `anthropic/claude-opus-4` (Default) - Most capable model
   - Pricing: $15/M input tokens, $75/M output tokens
   - 200,000 context window
   - Best for coding, complex reasoning, and agent workflows
   - Leading performance on SWE-bench (72.5%) and Terminal-bench (43.2%)
 
-- `anthropic/claude-sonnet-4` - Balanced performance and cost
+- `anthropic/claude-sonnet-4` - Balanced performance
   - Pricing: $3/M input tokens, $15/M output tokens
   - 200,000 context window
   - State-of-the-art performance on SWE-bench (72.7%)
   - Optimized for practical everyday use
+
+### Claude 3.5 Models
+- `anthropic/claude-3.5-sonnet` - Best value for money
+  - Pricing: $3/M input tokens, $15/M output tokens
+  - 200,000 context window
+  - Better-than-Opus capabilities at Sonnet prices
+  - Excels at:
+    - Coding: ~49% on SWE-Bench Verified
+    - Data science and unstructured data analysis
+    - Visual processing (charts, graphs, images)
+    - Agentic tasks and complex problem-solving
+
+### Claude 3.7 Models
+- `anthropic/claude-3.7-sonnet` - Previous generation
+  - Pricing: $3/M input tokens, $15/M output tokens
+  - 200,000 context window
+  - Good balance of performance and cost
+  - Suitable for general-purpose tasks
 
 ### Other Popular Models
 - `openai/gpt-4-turbo-preview`
@@ -88,7 +106,7 @@ OpenRouter supports various models from different providers. Here are the latest
 
 ## Model Comparison
 
-### Claude 4 Opus
+### Claude 4 Opus (Default)
 - Most capable model in the Claude 4 family
 - Best for complex reasoning, analysis, and creative tasks
 - Highest quality responses
@@ -105,6 +123,24 @@ OpenRouter supports various models from different providers. Here are the latest
 - Improved autonomous codebase navigation
 - Reduced error rates in agent-driven workflows
 - Better at following complex instructions
+
+### Claude 3.5 Sonnet
+- Best value for money
+- Better-than-Opus capabilities at Sonnet prices
+- Faster-than-Sonnet speeds
+- Excellent at:
+  - Coding without fancy prompt scaffolding
+  - Data science and unstructured data analysis
+  - Visual processing and image interpretation
+  - Complex, multi-step problem solving
+  - Agentic tasks requiring tool use
+
+### Claude 3.7 Sonnet
+- Previous generation model
+- Good balance of performance and cost
+- Suitable for general-purpose tasks
+- Reliable and stable performance
+- Good for routine coding tasks
 
 ## License
 

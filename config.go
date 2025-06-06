@@ -12,6 +12,14 @@ type Config struct {
 	AppName          string
 }
 
+// Available models for reference
+const (
+	ClaudeOpus4     = "anthropic/claude-opus-4"
+	ClaudeSonnet4   = "anthropic/claude-sonnet-4"
+	ClaudeSonnet35  = "anthropic/claude-3.5-sonnet"
+	ClaudeSonnet37  = "anthropic/claude-3.7-sonnet"
+)
+
 func LoadConfig() (*Config, error) {
 	apiKey := os.Getenv("OPENROUTER_API_KEY")
 	if apiKey == "" {
@@ -31,7 +39,7 @@ func LoadConfig() (*Config, error) {
 	// Default to Claude 4 Opus, the most capable model
 	model := os.Getenv("AI_MODEL")
 	if model == "" {
-		model = "anthropic/claude-opus-4" // Latest Claude 4 model
+		model = ClaudeOpus4 // Default model
 	}
 
 	return &Config{
