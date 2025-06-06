@@ -324,14 +324,14 @@ class ChatClient:
                         console.print("[dim]Asking AI to follow through with promised actions...[/dim]")
                         return self.send_chat_request(follow_up)
             
-                    # Add AI message to conversation and display it
-        self.conversation_history.append(ai_message)
-        if ai_content:
-            console.print("[bold blue]AI:[/bold blue]")
-            markdown_content = Markdown(ai_content)
-            console.print(markdown_content)
-        else:
-            console.print("[bold blue]AI:[/bold blue] [italic]AI sent an empty response.[/italic]")
+            # Add AI message to conversation and display it
+            self.conversation_history.append(ai_message)
+            if ai_content:
+                console.print("[bold blue]AI:[/bold blue]")
+                markdown_content = Markdown(ai_content)
+                console.print(markdown_content)
+            else:
+                console.print("[bold blue]AI:[/bold blue] [italic]AI sent an empty response.[/italic]")
 
     def _execute_single_tool(self, tool_call):
         """Execute a single tool call and return the result."""
