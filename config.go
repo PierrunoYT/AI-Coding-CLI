@@ -81,4 +81,12 @@ func LoadConfig() (*Config, error) {
 		AppURL:           appURL,
 		AppName:          appName,
 	}, nil
+}
+
+func (c *Config) GetModel() string {
+	return c.Model
+}
+
+func (c *Config) SetModel(model string) {
+	c.Model = model
 } 
