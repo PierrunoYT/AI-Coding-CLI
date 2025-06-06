@@ -13,60 +13,81 @@ A powerful command-line chat application that uses OpenRouter's API to interact 
 - **Conversation History**: Maintained during the session with full context
 - **Token Usage Tracking**: Monitor API usage and statistics
 - **Intuitive Commands**: Simple CLI interface with helpful commands
+- **Robust Error Handling**: Graceful handling of API errors with automatic retries
+- **Connection Testing**: Automatic API connectivity validation on startup
+- **Model Compatibility Checks**: Warns about models that don't support function calling
+- **Debug Mode**: Detailed logging for troubleshooting API issues
 
 ## Prerequisites
 
 - Python 3.7+
-- An OpenRouter API key
+- An OpenRouter API key (get one at [openrouter.ai](https://openrouter.ai))
 
 ## Setup
 
-1.  Clone the repository:
-    ```bash
-    git clone https://github.com/your-username/aichat-py.git
-    cd aichat-py
-    ```
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/your-username/aichat-py.git
+   cd aichat-py
+   ```
 
-2.  Set your environment variables. You can create a `.env` file or set them directly in your shell.
-    ```bash
-    # On Windows PowerShell
-    $env:OPENROUTER_API_KEY="your-api-key-here"
-    $env:APP_URL="https://your-app-url.com"  # Optional
-    $env:APP_NAME="Your App Name"            # Optional
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-    # On Linux/macOS
-    export OPENROUTER_API_KEY="your-api-key-here"
-    export APP_URL="https://your-app-url.com"  # Optional
-    export APP_NAME="Your App Name"            # Optional
-    ```
+3. **Set your OpenRouter API key:**
 
-3.  Install the required dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
+   **Windows PowerShell:**
+   ```powershell
+   $env:OPENROUTER_API_KEY="sk-or-your-api-key-here"
+   ```
 
-## Usage
+   **Linux/macOS:**
+   ```bash
+   export OPENROUTER_API_KEY="sk-or-your-api-key-here"
+   ```
 
-Run the application:
-```bash
-python main.py
-```
+   **Optional environment variables:**
+   ```bash
+   export APP_URL="https://your-app-url.com"     # Optional: Your app URL for OpenRouter
+   export APP_NAME="Your App Name"               # Optional: Custom app name
+   export DEBUG="true"                           # Optional: Enable debug logging
+   ```
 
-- Type your message and press Enter to send.
-- Type `/help` to see a list of available commands.
+4. **Test your setup (recommended):**
+   ```bash
+   python test_api.py
+   ```
+   This will verify your API key and connection before running the main application.
+
+5. **Run the application:**
+   ```bash
+   python main.py
+   ```
+
+## Quick Start
+
+1. Run `python main.py`
+2. Type `/agent` to enable coding agent mode
+3. Try: "List the files in the current directory"
+4. Type `/help` for all available commands
 
 ## Available Commands
 
+### Core Commands
 - `/help` - Show available commands and agent mode information
-- `/model` - Show current model information
+- `/model` - Show current model information  
 - `/models` - List and select from all available OpenRouter models
-- `/agent` - Toggle coding agent mode (enables file system tools)
-- `/parallel` - Toggle tool execution mode (parallel/sequential)
-- `/max-tools <number>` - Set maximum tool calls per response (1-20)
 - `/stats` - Show conversation statistics
 - `/reset` - Reset conversation history
 - `/clear` - Clear the screen
 - `/exit` - Exit the application
+
+### Agent Mode Commands
+- `/agent` - Toggle coding agent mode (enables file system tools)
+- `/parallel` - Toggle tool execution mode (parallel/sequential)
+- `/max-tools <number>` - Set maximum tool calls per response (1-20)
 
 ## Coding Agent Mode
 
@@ -89,7 +110,7 @@ Enable powerful coding assistance by typing `/agent` to toggle agent mode. When 
 - **Run Python Scripts**: Execute Python files with safety confirmations and timeout protection
 
 ### Tool Execution Modes
-- **Sequential Mode** 🔄: Tools run one after another
+- **Sequential Mode** 🔄: Tools run one after another (default)
   - Safer for dependent operations
   - Shows step-by-step progress
   - Better for file operations that depend on each other
@@ -99,7 +120,6 @@ Enable powerful coding assistance by typing `/agent` to toggle agent mode. When 
   - Perfect for bulk file operations
 
 ### Example Agent Tasks
-Try these commands in agent mode:
 
 **Basic Operations:**
 - "List the files in the current directory"
@@ -119,21 +139,115 @@ Try these commands in agent mode:
 - "Read the contents of all .py files in this directory"
 - "Backup all important files by creating .bak copies"
 
-**Configuration Commands:**
-- `/parallel` - Switch between sequential and parallel tool execution
-- `/max-tools 15` - Allow up to 15 tool calls per AI response
-
-## Model Selection
+## Model Selection & Compatibility
 
 The application supports dynamic model selection from all available OpenRouter models.
 
-1.  Type `/models` to see the list of available models.
-2.  Each model will show its ID, context length, and pricing information.
-3.  You can select a model in two ways:
-    -   Enter the number of the model from the list.
-    -   Type the model handle directly (e.g., `openai/gpt-4o`).
-4.  The selected model will be used for all subsequent conversations.
+### Selecting a Model
+1. Type `/models` to see the list of available models
+2. Each model shows its ID, context length, and pricing information
+3. Select a model by:
+   - Entering the number from the list, or
+   - Typing the model handle directly (e.g., `openai/gpt-4o`)
+
+### Function Calling Support
+For agent mode to work properly, use models that support function calling:
+- ✅ **Recommended**: `openai/gpt-4o`, `openai/gpt-4`, `openai/gpt-3.5-turbo`
+- ✅ **Good**: `anthropic/claude-3-5-sonnet`, `anthropic/claude-3-haiku`
+- ✅ **Supported**: `google/gemini-pro`, `google/gemini-1.5-pro`
+- ⚠️ **Limited**: Other models may not support function calling
+
+The application will automatically detect and warn you if your selected model doesn't support function calling.
+
+## Troubleshooting
+
+### Common Issues
+
+**1. "OPENROUTER_API_KEY environment variable not set"**
+- Solution: Set your API key using the commands in the Setup section
+- Make sure your key starts with `sk-or-` (OpenRouter keys)
+
+**2. "Authentication failed" or 401 errors**
+- Check that your API key is correct and active
+- Verify your OpenRouter account has sufficient credits
+- Run `python test_api.py` to test your API key
+
+**3. "400 Bad Request" errors**
+- The application now handles these automatically with retry logic
+- If problems persist, try switching to a different model with `/models`
+- Enable debug mode: `export DEBUG=true` and run again
+
+**4. "Tool choice parameter causing issues"**
+- This is handled automatically - the app will retry without tool_choice
+- Consider switching to a function-calling compatible model
+
+**5. Model doesn't support function calling**
+- Switch to a recommended model (see Model Compatibility section)
+- Agent mode features won't work with non-compatible models
+
+### Debug Mode
+
+Enable detailed logging for troubleshooting:
+```bash
+export DEBUG=true
+python main.py
+```
+
+This will show:
+- API request details
+- Model compatibility checks
+- Detailed error messages
+- Tool execution information
+
+### Testing Your Setup
+
+Use the included test script to verify everything works:
+```bash
+python test_api.py
+```
+
+This will:
+- ✅ Check if your API key is set
+- ✅ Test connection to OpenRouter
+- ✅ Verify authentication
+- ✅ Show how many models are available
+
+## Advanced Configuration
+
+### Environment Variables
+```bash
+OPENROUTER_API_KEY="sk-or-your-key"     # Required: Your OpenRouter API key
+APP_URL="https://your-site.com"         # Optional: For OpenRouter attribution
+APP_NAME="Your App Name"                # Optional: Custom app name
+DEBUG="true"                            # Optional: Enable debug logging
+```
+
+### Safety Features
+- **Confirmation prompts**: For file deletion and code execution
+- **Timeout protection**: Python scripts are limited to 30 seconds
+- **Tool call limits**: Maximum 10 tools per response (configurable)
+- **Error recovery**: Automatic retry logic for common API issues
+
+## Files in This Project
+
+- `main.py` - Main application with chat interface and agent mode
+- `tools.py` - File system tools and function definitions
+- `test_api.py` - API connection testing utility
+- `requirements.txt` - Python dependencies
+- `README.md` - This documentation
 
 ## License
 
-MIT 
+MIT License - See LICENSE file for details.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues or pull requests.
+
+## Support
+
+If you encounter issues:
+1. Run `python test_api.py` to test your setup
+2. Enable debug mode with `DEBUG=true`
+3. Check the troubleshooting section above
+4. Open an issue with your error details 

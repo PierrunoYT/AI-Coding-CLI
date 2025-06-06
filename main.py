@@ -21,6 +21,7 @@ class Config:
         self.agent_mode = False  # Toggle for coding agent mode
         self.tool_execution_mode = "sequential"  # "sequential" or "parallel"
         self.max_tool_calls = 10  # Maximum tool calls per response
+        self.debug = os.getenv("DEBUG", "false").lower() == "true"  # Debug mode
 
     def get_model(self):
         return self.model
@@ -50,6 +51,13 @@ class ChatClient:
     def __init__(self, config):
         self.config = config
         self.api_base = "https://openrouter.ai/api/v1"
+        
+        # Validate API key
+        if not self.config.api_key:
+            raise ValueError("OPENROUTER_API_KEY environment variable not set")
+        if not self.config.api_key.startswith('sk-'):
+            console.print(f"[yellow]⚠️  Warning: API key doesn't look like a typical OpenRouter key (should start with 'sk-')[/yellow]")
+        
         self.headers = {
             "Authorization": f"Bearer {self.config.api_key}",
             "Content-Type": "application/json",
@@ -60,9 +68,27 @@ class ChatClient:
         self.total_tokens = 0
         self.total_cost = 0.0
 
+    def test_api_connection(self):
+        """Test if the API key and connection work"""
+        try:
+            response = requests.get(f"{self.api_base}/models", headers=self.headers)
+            response.raise_for_status()
+            return True
+        except requests.exceptions.HTTPError as e:
+            if response.status_code == 401:
+                console.print("[bold red]❌ Authentication failed. Please check your OPENROUTER_API_KEY.[/bold red]")
+            elif response.status_code == 403:
+                console.print("[bold red]❌ Access forbidden. Your API key may not have the required permissions.[/bold red]")
+            else:
+                console.print(f"[bold red]❌ API test failed with HTTP {response.status_code}: {e}[/bold red]")
+            return False
+        except requests.exceptions.RequestException as e:
+            console.print(f"[bold red]❌ Connection test failed: {e}[/bold red]")
+            return False
+
     def get_available_models(self):
         try:
-            response = requests.get(f"{self.api_base}/models")
+            response = requests.get(f"{self.api_base}/models", headers=self.headers)
             response.raise_for_status()
             models_data = response.json().get("data", [])
             return sorted(models_data, key=lambda x: x.get('id'))
@@ -90,8 +116,21 @@ class ChatClient:
         
         # Add tools if in agent mode
         if self.config.agent_mode:
-            payload["tools"] = TOOLS_DEFINITIONS
-            payload["tool_choice"] = "auto"
+            # Check if the model supports function calling
+            model_id = self.config.get_model().lower()
+            supports_functions = any(x in model_id for x in ['gpt-4', 'gpt-3.5', 'claude', 'gemini'])
+            
+            if supports_functions:
+                payload["tools"] = TOOLS_DEFINITIONS
+                payload["tool_choice"] = "auto"
+            else:
+                console.print(f"[yellow]⚠️  Model '{self.config.get_model()}' may not support function calling. Consider using gpt-4o, claude-3, or another compatible model.[/yellow]")
+
+        if self.config.debug:
+            console.print(f"[dim]Debug: Sending request to {self.api_base}/chat/completions[/dim]")
+            console.print(f"[dim]Debug: Model = {payload.get('model')}, Agent mode = {self.config.agent_mode}[/dim]")
+            if 'tools' in payload:
+                console.print(f"[dim]Debug: Including {len(payload['tools'])} tools[/dim]")
 
         try:
             response = requests.post(
@@ -101,43 +140,79 @@ class ChatClient:
             )
             response.raise_for_status()
             data = response.json()
-            
-            # Handle usage stats
-            if "usage" in data:
-                self.total_tokens += data['usage']['total_tokens']
-            
-            ai_message = data['choices'][0]['message']
-            self.conversation_history.append(ai_message)
-            
-            # Check if AI wants to use tools
-            if ai_message.get('tool_calls'):
-                tool_calls = ai_message['tool_calls']
-                num_tools = len(tool_calls)
-                
-                # Limit the number of tool calls for safety
-                if num_tools > self.config.max_tool_calls:
-                    console.print(f"[bold red]⚠️  Too many tool calls requested ({num_tools}). Limiting to {self.config.max_tool_calls}.[/bold red]")
-                    tool_calls = tool_calls[:self.config.max_tool_calls]
-                    num_tools = len(tool_calls)
-                
-                execution_mode = self.config.tool_execution_mode
-                console.print(f"[bold cyan]🤖 Assistant is using {num_tools} tool(s) in {execution_mode} mode...[/bold cyan]")
-                
-                if execution_mode == "parallel" and num_tools > 1:
-                    # Execute tools in parallel
-                    self._execute_tools_parallel(tool_calls)
+        except requests.exceptions.HTTPError as e:
+            if response.status_code == 400:
+                # Try again without tool_choice if it's a 400 error in agent mode
+                if self.config.agent_mode and "tool_choice" in payload:
+                    console.print("[yellow]⚠️  Tool choice parameter causing issues, retrying without it...[/yellow]")
+                    payload_retry = payload.copy()
+                    del payload_retry["tool_choice"]
+                    
+                    response = requests.post(
+                        f"{self.api_base}/chat/completions",
+                        headers=self.headers,
+                        json=payload_retry
+                    )
+                    response.raise_for_status()
+                    data = response.json()
                 else:
-                    # Execute tools sequentially
-                    self._execute_tools_sequential(tool_calls)
-                
-                # Get final response after tool execution
-                final_payload = {
-                    "model": self.config.get_model(),
-                    "messages": self.conversation_history,
-                    "tools": TOOLS_DEFINITIONS,
-                    "tool_choice": "auto"
-                }
-                
+                    # Print detailed error info for debugging
+                    try:
+                        error_data = response.json()
+                        error_msg = error_data.get('error', {}).get('message', str(e))
+                        console.print(f"[bold red]API Error (400): {error_msg}[/bold red]")
+                    except:
+                        console.print(f"[bold red]API Error (400): {e}[/bold red]")
+                    self.conversation_history.pop() # remove user message if request failed
+                    return
+            else:
+                raise
+        except requests.exceptions.RequestException as e:
+            console.print(f"[bold red]API Error: {e}[/bold red]")
+            self.conversation_history.pop() # remove user message if request failed
+
+        # Handle usage stats
+        if "usage" in data:
+            self.total_tokens += data['usage']['total_tokens']
+        
+        ai_message = data['choices'][0]['message']
+        self.conversation_history.append(ai_message)
+        
+        # Check if AI wants to use tools
+        if ai_message.get('tool_calls'):
+            tool_calls = ai_message['tool_calls']
+            num_tools = len(tool_calls)
+            
+            # Limit the number of tool calls for safety
+            if num_tools > self.config.max_tool_calls:
+                console.print(f"[bold red]⚠️  Too many tool calls requested ({num_tools}). Limiting to {self.config.max_tool_calls}.[/bold red]")
+                tool_calls = tool_calls[:self.config.max_tool_calls]
+                num_tools = len(tool_calls)
+            
+            execution_mode = self.config.tool_execution_mode
+            console.print(f"[bold cyan]�� Assistant is using {num_tools} tool(s) in {execution_mode} mode...[/bold cyan]")
+            
+            if execution_mode == "parallel" and num_tools > 1:
+                # Execute tools in parallel
+                self._execute_tools_parallel(tool_calls)
+            else:
+                # Execute tools sequentially
+                self._execute_tools_sequential(tool_calls)
+            
+            # Get final response after tool execution
+            final_payload = {
+                "model": self.config.get_model(),
+                "messages": self.conversation_history,
+            }
+            
+            # Only add tools if the model supports them
+            model_id = self.config.get_model().lower()
+            supports_functions = any(x in model_id for x in ['gpt-4', 'gpt-3.5', 'claude', 'gemini'])
+            if supports_functions:
+                final_payload["tools"] = TOOLS_DEFINITIONS
+                final_payload["tool_choice"] = "auto"
+            
+            try:
                 final_response = requests.post(
                     f"{self.api_base}/chat/completions",
                     headers=self.headers,
@@ -145,20 +220,33 @@ class ChatClient:
                 )
                 final_response.raise_for_status()
                 final_data = final_response.json()
-                
-                if "usage" in final_data:
-                    self.total_tokens += final_data['usage']['total_tokens']
-                
-                final_message = final_data['choices'][0]['message']
-                console.print(f"\n[bold cyan]AI:[/bold cyan] {final_message['content']}")
-                self.conversation_history.append(final_message)
-            else:
-                # No tools called, just print the response
-                console.print(f"[bold cyan]AI:[/bold cyan] {ai_message['content']}")
-
-        except requests.exceptions.RequestException as e:
-            console.print(f"[bold red]API Error: {e}[/bold red]")
-            self.conversation_history.pop() # remove user message if request failed
+            except requests.exceptions.HTTPError as e:
+                if final_response.status_code == 400:
+                    # Try again without tool_choice if it's a 400 error
+                    console.print("[yellow]⚠️  Tool choice parameter causing issues in final call, retrying without it...[/yellow]")
+                    final_payload_retry = final_payload.copy()
+                    del final_payload_retry["tool_choice"]
+                    
+                    final_response = requests.post(
+                        f"{self.api_base}/chat/completions",
+                        headers=self.headers,
+                        json=final_payload_retry
+                    )
+                    final_response.raise_for_status()
+                    final_data = final_response.json()
+                else:
+                    console.print(f"[bold red]API Error in final call: {e}[/bold red]")
+                    return
+            
+            if "usage" in final_data:
+                self.total_tokens += final_data['usage']['total_tokens']
+            
+            final_message = final_data['choices'][0]['message']
+            console.print(f"\n[bold cyan]AI:[/bold cyan] {final_message['content']}")
+            self.conversation_history.append(final_message)
+        else:
+            # No tools called, just print the response
+            console.print(f"[bold cyan]AI:[/bold cyan] {ai_message['content']}")
 
     def _execute_single_tool(self, tool_call):
         """Execute a single tool call and return the result."""
@@ -394,10 +482,22 @@ def main():
     cfg = Config()
     if not cfg.api_key:
         console.print("[bold red]Error: OPENROUTER_API_KEY environment variable not set.[/bold red]")
+        console.print("[yellow]Please set your OpenRouter API key: export OPENROUTER_API_KEY=your_key_here[/yellow]")
         return
-        
-    client = ChatClient(cfg)
+    
+    try:    
+        client = ChatClient(cfg)
+    except ValueError as e:
+        console.print(f"[bold red]Error: {e}[/bold red]")
+        return
 
+    # Test API connection
+    console.print("[cyan]Testing API connection...[/cyan]")
+    if not client.test_api_connection():
+        console.print("[bold red]Failed to connect to OpenRouter API. Please check your API key and internet connection.[/bold red]")
+        return
+
+    console.print("[bold green]✅ API connection successful![/bold green]")
     console.print("[bold]Welcome to AI Chat CLI![/bold]")
     console.print(f"Type a message to start chatting or `/help` for commands.")
     console.print(f"Using model: [cyan]{client.config.get_model()}[/cyan]")
