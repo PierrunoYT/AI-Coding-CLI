@@ -23,6 +23,41 @@ type Message struct {
 	Content string `json:"content"`
 }
 
+// Usage represents token usage information from the API
+type Usage struct {
+	PromptTokens     int `json:"prompt_tokens"`
+	CompletionTokens int `json:"completion_tokens"`
+	TotalTokens      int `json:"total_tokens"`
+}
+
+// ChatResponse represents the API response structure
+type ChatResponse struct {
+	ID      string `json:"id"`
+	Choices []struct {
+		Message struct {
+			Role    string `json:"role"`
+			Content string `json:"content"`
+		} `json:"message"`
+		FinishReason string `json:"finish_reason"`
+	} `json:"choices"`
+	Usage Usage  `json:"usage"`
+	Model string `json:"model"`
+}
+
+// StreamingResponse represents streaming API response
+type StreamingResponse struct {
+	ID      string `json:"id"`
+	Choices []struct {
+		Delta struct {
+			Role    string `json:"role,omitempty"`
+			Content string `json:"content,omitempty"`
+		} `json:"delta"`
+		FinishReason string `json:"finish_reason"`
+	} `json:"choices"`
+	Usage Usage  `json:"usage,omitempty"`
+	Model string `json:"model"`
+}
+
 // ChatClient handles communication with the OpenRouter API
 type ChatClient struct {
 	config     *Config
@@ -52,9 +87,9 @@ func (c *ChatClient) GetResponse(input string) (string, error) {
 		Content: input,
 	})
 
-	// Prepare request body
+	// Prepare request body according to OpenRouter API spec
 	requestBody := map[string]interface{}{
-		"model": c.config.Model,
+		"model":    c.config.Model,
 		"messages": c.messages,
 	}
 
@@ -69,7 +104,7 @@ func (c *ChatClient) GetResponse(input string) (string, error) {
 		return "", fmt.Errorf("error creating request: %v", err)
 	}
 
-	// Set headers
+	// Set headers according to OpenRouter documentation
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.config.OpenRouterAPIKey)
 	req.Header.Set("HTTP-Referer", c.config.AppURL)
@@ -93,15 +128,8 @@ func (c *ChatClient) GetResponse(input string) (string, error) {
 		return "", fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(body))
 	}
 
-	// Parse response
-	var response struct {
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
-	}
-
+	// Parse response according to OpenRouter API spec
+	var response ChatResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		return "", fmt.Errorf("error parsing response: %v", err)
 	}
@@ -129,11 +157,11 @@ func (c *ChatClient) GetResponse(input string) (string, error) {
 
 // StreamMessage streams a message from the AI model
 func (c *ChatClient) StreamMessage(messages []Message, callback func(string)) error {
-	// Prepare request body
+	// Prepare request body according to OpenRouter API spec
 	requestBody := map[string]interface{}{
-		"model": c.config.Model,
+		"model":    c.config.Model,
 		"messages": messages,
-		"stream": true,
+		"stream":   true,
 	}
 
 	jsonData, err := json.Marshal(requestBody)
@@ -147,7 +175,7 @@ func (c *ChatClient) StreamMessage(messages []Message, callback func(string)) er
 		return fmt.Errorf("error creating request: %v", err)
 	}
 
-	// Set headers
+	// Set headers according to OpenRouter documentation
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.config.OpenRouterAPIKey)
 	req.Header.Set("HTTP-Referer", c.config.AppURL)
@@ -166,7 +194,7 @@ func (c *ChatClient) StreamMessage(messages []Message, callback func(string)) er
 		return fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(body))
 	}
 
-	// Read response stream
+	// Read response stream according to OpenRouter streaming format
 	reader := bufio.NewReader(resp.Body)
 	for {
 		line, err := reader.ReadString('\n')
@@ -178,29 +206,26 @@ func (c *ChatClient) StreamMessage(messages []Message, callback func(string)) er
 		}
 
 		// Skip empty lines
-		if strings.TrimSpace(line) == "" {
+		line = strings.TrimSpace(line)
+		if line == "" {
 			continue
 		}
 
-		// Remove "data: " prefix
-		line = strings.TrimPrefix(line, "data: ")
+		// Remove "data: " prefix if present
+		if strings.HasPrefix(line, "data: ") {
+			line = strings.TrimPrefix(line, "data: ")
+		}
 
 		// Check for end of stream
-		if strings.TrimSpace(line) == "[DONE]" {
+		if line == "[DONE]" {
 			break
 		}
 
-		// Parse JSON response
-		var response struct {
-			Choices []struct {
-				Delta struct {
-					Content string `json:"content"`
-				} `json:"delta"`
-			} `json:"choices"`
-		}
-
+		// Parse JSON response according to OpenRouter streaming format
+		var response StreamingResponse
 		if err := json.Unmarshal([]byte(line), &response); err != nil {
-			return fmt.Errorf("error parsing stream response: %v", err)
+			// Skip malformed JSON chunks
+			continue
 		}
 
 		if len(response.Choices) > 0 {
@@ -212,4 +237,11 @@ func (c *ChatClient) StreamMessage(messages []Message, callback func(string)) er
 	}
 
 	return nil
+}
+
+// GetUsage returns the current usage statistics
+func (c *ChatClient) GetUsage() Usage {
+	// This would typically be tracked from API responses
+	// For now, return empty usage
+	return Usage{}
 } 
