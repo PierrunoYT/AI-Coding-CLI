@@ -74,11 +74,18 @@ This is a CLI chat application with a dual-mode architecture: regular chat and c
 ## Development Notes
 
 ### Documentation Requirements
-Always update these files when making changes:
-- `README.md` - User-facing documentation
+**CRITICAL**: Always update these files when making changes AND commit them:
+- `README.md` - User-facing documentation  
 - `tasks.md` - Development history and technical details
 - `project-structure.md` - When file structure changes
 - `code-issues.md` - When fixing bugs or adding new issues
+
+**Required Workflow**:
+1. Make code changes
+2. Update all relevant markdown files listed above
+3. Commit ALL changes together with descriptive commit message
+4. Use conventional commit format: `feat:`, `fix:`, `docs:`, `style:`, `refactor:`, `test:`, `chore:`, `perf:`, `ci:`, or `build:`
+5. Include Claude Code attribution in commit message
 
 ### Critical Code Areas
 
@@ -111,3 +118,16 @@ Function calling support is detected via hardcoded patterns in `main.py:158`. Su
 - Manual testing required for tool execution modes
 - Test error conditions with invalid API keys/models
 - Verify tool promise detection with various AI response patterns
+
+### Commit Message Template
+```
+<type>: <description>
+
+- <change 1>
+- <change 2>
+- Updated documentation files as required
+
+🤖 Generated with [Claude Code](https://claude.ai/code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```

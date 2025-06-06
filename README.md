@@ -251,6 +251,10 @@ DEBUG="true"                            # Optional: Enable debug logging
 - `test_api.py` - API connection testing utility
 - `requirements.txt` - Python dependencies
 - `README.md` - This documentation
+- `CLAUDE.md` - Development guidance for Claude Code instances
+- `code-issues.md` - Code quality analysis and issue tracking
+- `tasks.md` - Complete development history and technical documentation
+- `project-structure.md` - Architecture overview and file structure
 
 ## License
 

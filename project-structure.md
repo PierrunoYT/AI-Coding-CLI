@@ -11,6 +11,8 @@ AI Coding CLI/
 ├── 📋 tasks.md                   # Complete development history and documentation
 ├── 🧪 test_api.py               # API connection testing utility
 ├── 🛠️ tools.py                  # File system tools and function definitions (369 lines)
+├── 🤖 CLAUDE.md                 # Development guidance for Claude Code instances
+├── 🔍 code-issues.md            # Code quality analysis and issue tracking
 └── 📝 project-structure.md      # This file - Project architecture overview
 ```
 
