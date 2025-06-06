@@ -296,14 +296,14 @@ class ChatClient:
                 self.conversation_history.append(final_message)
                 return self.send_chat_request("")  # Continue with empty message to process additional tools
             else:
-                            # Display the final AI response
-            self.conversation_history.append(final_message)
-            if final_content:
-                console.print("[bold blue]AI:[/bold blue]")
-                markdown_content = Markdown(final_content)
-                console.print(markdown_content)
-            else:
-                console.print("[bold blue]AI:[/bold blue] [italic]AI provided tool results but no additional commentary.[/italic]")
+                # Display the final AI response
+                self.conversation_history.append(final_message)
+                if final_content:
+                    console.print("[bold blue]AI:[/bold blue]")
+                    markdown_content = Markdown(final_content)
+                    console.print(markdown_content)
+                else:
+                    console.print("[bold blue]AI:[/bold blue] [italic]AI provided tool results but no additional commentary.[/italic]")
                 
         else:
             # AI didn't call tools - check if it promised to use any
