@@ -71,17 +71,20 @@ class ChatClient:
 
     def test_api_connection(self):
         """Test if the API key and connection work"""
+        response = None
         try:
             response = requests.get(f"{self.api_base}/models", headers=self.headers)
             response.raise_for_status()
             return True
         except requests.exceptions.HTTPError as e:
-            if response.status_code == 401:
+            if response and response.status_code == 401:
                 console.print("[bold red]❌ Authentication failed. Please check your OPENROUTER_API_KEY.[/bold red]")
-            elif response.status_code == 403:
+            elif response and response.status_code == 403:
                 console.print("[bold red]❌ Access forbidden. Your API key may not have the required permissions.[/bold red]")
-            else:
+            elif response:
                 console.print(f"[bold red]❌ API test failed with HTTP {response.status_code}: {e}[/bold red]")
+            else:
+                console.print(f"[bold red]❌ HTTP Error: {e}[/bold red]")
             return False
         except requests.exceptions.RequestException as e:
             console.print(f"[bold red]❌ Connection test failed: {e}[/bold red]")
